@@ -1,7 +1,11 @@
-"""Assistant IA : Ollama (local) ou OpenAI, avec repli hors-ligne.
+"""Tuteur IA : Ollama (local) ou OpenAI (distant), avec repli hors ligne.
 
-Le but pedagogique est de montrer qu'on peut brancher le meme prompt
-sur un modele local ou une API distante derriere la meme interface.
+Le même prompt part vers un modèle local ou une API distante derrière une seule
+interface. Ce qui est transmis : le titre et l'énoncé de l'exercice, le code de
+l'élève et le retour des tests. Jamais son email ni son nom d'utilisateur.
+
+Avec OpenAI, ces éléments quittent le serveur (et l'Union européenne) :
+l'interface en avertit l'élève avant l'envoi (voir /api/meta, `ai_external`).
 """
 from __future__ import annotations
 
@@ -10,8 +14,8 @@ from flask import current_app
 
 SYSTEM_PROMPT = (
     "Tu es un tuteur de programmation bienveillant. "
-    "Tu reponds en francais, en 4 phrases maximum. "
-    "Tu donnes un INDICE, jamais la solution complete ni le code final."
+    "Tu réponds en français, en 4 phrases maximum. "
+    "Tu donnes un INDICE, jamais la solution complète ni le code final."
 )
 
 TIMEOUT = 30
@@ -22,7 +26,7 @@ class AIUnavailable(RuntimeError):
 
 
 def provider() -> str:
-    return (current_app.config.get("AI_PROVIDER") or "").lower()
+    return (current_app.config.get("AI_PROVIDER") or "").strip().lower()
 
 
 def ask(prompt: str, system: str = SYSTEM_PROMPT) -> dict:
@@ -37,7 +41,7 @@ def ask(prompt: str, system: str = SYSTEM_PROMPT) -> dict:
 def _ollama(prompt: str, system: str) -> str:
     url = current_app.config["OLLAMA_URL"].rstrip("/") + "/api/chat"
     try:
-        resp = requests.post(
+        response = requests.post(
             url,
             json={
                 "model": current_app.config["OLLAMA_MODEL"],
@@ -49,10 +53,10 @@ def _ollama(prompt: str, system: str) -> str:
             },
             timeout=TIMEOUT,
         )
-        resp.raise_for_status()
-        return resp.json()["message"]["content"].strip()
+        response.raise_for_status()
+        return response.json()["message"]["content"].strip()
     except (requests.RequestException, KeyError, ValueError) as exc:
-        raise AIUnavailable(f"Ollama injoignable : {exc}") from exc
+        raise AIUnavailable("Ollama injoignable") from exc
 
 
 def _openai(prompt: str, system: str) -> str:
@@ -60,7 +64,7 @@ def _openai(prompt: str, system: str) -> str:
     if not key:
         raise AIUnavailable("OPENAI_API_KEY absente")
     try:
-        resp = requests.post(
+        response = requests.post(
             "https://api.openai.com/v1/chat/completions",
             headers={"Authorization": f"Bearer {key}"},
             json={
@@ -73,39 +77,37 @@ def _openai(prompt: str, system: str) -> str:
             },
             timeout=TIMEOUT,
         )
-        resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"].strip()
+        response.raise_for_status()
+        return response.json()["choices"][0]["message"]["content"].strip()
     except (requests.RequestException, KeyError, ValueError) as exc:
-        raise AIUnavailable(f"OpenAI injoignable : {exc}") from exc
+        # Le message d'origine peut contenir l'URL ou des en-têtes : on ne le relaie pas.
+        raise AIUnavailable("OpenAI injoignable") from exc
 
 
 def _offline(prompt: str) -> str:
-    """Repli sans modele : heuristique simple pour que l'app reste utilisable."""
+    """Repli sans modèle : une heuristique simple, pour que l'application reste utilisable."""
     low = prompt.lower()
     if "traceback" in low or "error" in low or "erreur" in low:
         return (
-            "Lis la derniere ligne du traceback : elle nomme le type d'erreur et la ligne. "
-            "Verifie les noms de variables et les types manipules. "
-            "(Aucun fournisseur IA configure : voir AI_PROVIDER dans .env)"
+            "Lisez la dernière ligne du message d'erreur : elle nomme le type d'erreur "
+            "et la ligne en cause. Vérifiez les noms de variables et les types manipulés."
         )
-    if "sql" in low:
+    if "sql" in low or "select" in low:
         return (
-            "Pense a l'ordre SELECT / FROM / JOIN / WHERE / GROUP BY / HAVING / ORDER BY, "
-            "et verifie la cle de jointure. "
-            "(Aucun fournisseur IA configure : voir AI_PROVIDER dans .env)"
+            "Reprenez l'ordre SELECT / FROM / JOIN / WHERE / GROUP BY / HAVING / ORDER BY, "
+            "et vérifiez la clé de jointure."
         )
     return (
-        "Decoupe le probleme : quelles entrees, quelle sortie attendue, quelle etape bloque ? "
-        "Ecris d'abord un cas simple a la main. "
-        "(Aucun fournisseur IA configure : voir AI_PROVIDER dans .env)"
+        "Découpez le problème : quelles entrées, quelle sortie attendue, quelle étape bloque ? "
+        "Écrivez d'abord un cas simple à la main."
     )
 
 
 def hint_prompt(exercise, code: str, output: str) -> str:
     return (
         f"Exercice : {exercise.title}\n"
-        f"Enonce :\n{exercise.statement[:1200]}\n\n"
-        f"Code de l'eleve :\n```\n{code[:2000]}\n```\n\n"
-        f"Resultat des tests :\n{output[:1200]}\n\n"
-        "Donne un seul indice cible pour debloquer l'eleve."
+        f"Énoncé :\n{exercise.statement[:1200]}\n\n"
+        f"Code de l'élève :\n```\n{code[:2000]}\n```\n\n"
+        f"Résultat des tests :\n{output[:1200]}\n\n"
+        "Donne un seul indice ciblé pour débloquer l'élève."
     )

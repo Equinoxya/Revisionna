@@ -1,49 +1,123 @@
 COURSE = {
     "slug": "machine-learning",
-    "title": "Machine Learning : les bases",
-    "summary": "Supervise vs non supervise, train/test, metriques, surapprentissage, pipeline scikit-learn.",
-    "category": "Donnees",
-    "level": "intermediaire",
-    "icon": "🤖",
+    "title": "Machine learning : les bases",
+    "summary": "Apprentissage supervisé ou non, jeux d'entraînement et de test, métriques, surapprentissage, pipeline scikit-learn.",
+    "category": "Données",
+    "level": "intermédiaire",
+    "icon": "ML",
     "lessons": [
         {
             "slug": "vocabulaire-et-protocole",
-            "title": "Vocabulaire et protocole experimental",
+            "title": "Vocabulaire et protocole expérimental",
             "duration_min": 20,
             "blocks": [
-                {"type": "text", "md": "Trois familles :\n\n- **Supervise** : on dispose d'etiquettes. Regression (valeur continue) ou classification (classe).\n- **Non supervise** : pas d'etiquettes. Clustering, reduction de dimension.\n- **Renforcement** : un agent apprend par recompense.\n\nLe protocole minimal : separer les donnees en **train** / **test**, apprendre sur train, mesurer sur test."},
-                {"type": "code", "lang": "python", "code": "from sklearn.model_selection import train_test_split\nfrom sklearn.pipeline import make_pipeline\nfrom sklearn.preprocessing import StandardScaler\nfrom sklearn.linear_model import LogisticRegression\n\nX_train, X_test, y_train, y_test = train_test_split(\n    X, y, test_size=0.2, random_state=42, stratify=y\n)\n\nmodele = make_pipeline(StandardScaler(), LogisticRegression())\nmodele.fit(X_train, y_train)\nprint(modele.score(X_test, y_test))"},
-                {"type": "callout", "tone": "warn", "md": "**Fuite de donnees** : si vous normalisez avant le split, la moyenne du test se retrouve dans le train. Mettez toujours le pretraitement **dans** le pipeline."},
-                {"type": "text", "md": "**Surapprentissage** : score eleve en train, mediocre en test -> le modele a memorise. On y repond par plus de donnees, moins de complexite, de la regularisation ou une validation croisee."},
-                {"type": "quiz", "id": "q1", "question": "Train 0.99 / test 0.62 : quel diagnostic ?", "choices": ["Sous-apprentissage", "Surapprentissage", "Fuite de donnees", "Le modele est parfait"], "answer": "Surapprentissage", "explanation": "L'ecart train/test est la signature du surapprentissage."},
-                {"type": "quiz", "id": "q2", "question": "A quoi sert `stratify=y` ?", "choices": ["A melanger les donnees", "A conserver les proportions de classes dans train et test", "A normaliser", "A accelerer"], "answer": "A conserver les proportions de classes dans train et test", "explanation": "Indispensable sur des classes desequilibrees."},
+                {"type": "text", "md": '''Trois familles d'apprentissage :
+
+- **supervisé** : on dispose d'étiquettes. Régression (prédire une valeur) ou classification (prédire une classe) ;
+- **non supervisé** : pas d'étiquettes. Regroupement, réduction de dimension ;
+- **par renforcement** : un agent apprend à force de récompenses.
+
+Le protocole minimal : séparer les données en un jeu d'**entraînement** et un jeu de **test**, apprendre sur le premier, mesurer sur le second.'''},
+                {"type": "code", "lang": "python", "code": '''from sklearn.model_selection import train_test_split
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+modele = make_pipeline(StandardScaler(), LogisticRegression())
+modele.fit(X_train, y_train)
+print(modele.score(X_test, y_test))'''},
+                {"type": "callout", "tone": "warn", "md": "**Fuite de données** : si vous normalisez avant de séparer, la moyenne du jeu de test se retrouve dans l'entraînement. Placez toujours le prétraitement **dans** le pipeline."},
+                {"type": "text", "md": "**Surapprentissage** : un score élevé à l'entraînement et médiocre au test signale que le modèle a mémorisé au lieu d'apprendre. Les remèdes : davantage de données, un modèle plus simple, de la régularisation, une validation croisée."},
+                {"type": "quiz", "id": "q1", "question": "Entraînement 0,99 et test 0,62 : quel diagnostic ?", "choices": ["Sous-apprentissage", "Surapprentissage", "Fuite de données", "Le modèle est parfait"], "answer": "Surapprentissage", "explanation": "Un grand écart entre entraînement et test, c'est la signature du surapprentissage."},
+                {"type": "quiz", "id": "q2", "question": "À quoi sert `stratify=y` ?", "choices": ["À mélanger les données", "À conserver les proportions de chaque classe dans les deux jeux", "À normaliser", "À accélérer le calcul"], "answer": "À conserver les proportions de chaque classe dans les deux jeux", "explanation": "Indispensable quand les classes sont déséquilibrées."},
             ],
         },
         {
             "slug": "metriques",
-            "title": "Choisir la bonne metrique",
+            "title": "Choisir la bonne métrique",
             "duration_min": 15,
             "blocks": [
-                {"type": "text", "md": "Sur un jeu desequilibre, l'exactitude (**accuracy**) ment : 99 % de negatifs, un modele qui dit toujours *negatif* obtient 99 %.\n\nA partir de la matrice de confusion (VP, FP, VN, FN) :\n\n- **Precision** = VP / (VP + FP) : parmi mes alertes, combien de vraies ?\n- **Rappel** = VP / (VP + FN) : parmi les cas reels, combien detectes ?\n- **F1** = moyenne harmonique des deux."},
-                {"type": "code", "lang": "python", "code": "from sklearn.metrics import classification_report, confusion_matrix\n\nprint(confusion_matrix(y_test, y_pred))\nprint(classification_report(y_test, y_pred, digits=3))"},
-                {"type": "text", "md": "Le choix depend du cout de l'erreur : pour un depistage medical on privilegie le **rappel** (ne rien laisser passer) ; pour un filtre anti-spam, la **precision** (ne pas jeter un vrai message)."},
-                {"type": "quiz", "id": "q1", "question": "Detection de fraude, 0.1 % de cas positifs. Quelle metrique ?", "choices": ["Accuracy", "Rappel et precision (ou F1)", "R2", "MSE"], "answer": "Rappel et precision (ou F1)", "explanation": "L'accuracy est inutilisable sur un desequilibre extreme."},
+                {"type": "text", "md": '''Sur un jeu déséquilibré, l'exactitude (*accuracy*) ment : avec 99 % de négatifs, un modèle qui répond toujours « négatif » obtient 99 %.
+
+On part donc de la matrice de confusion (vrais et faux positifs, vrais et faux négatifs) :
+
+- **précision** = VP / (VP + FP) : parmi mes alertes, combien sont justifiées ?
+- **rappel** = VP / (VP + FN) : parmi les cas réels, combien ai-je détectés ?
+- **F1** = moyenne harmonique des deux.'''},
+                {"type": "code", "lang": "python", "code": '''from sklearn.metrics import classification_report, confusion_matrix
+
+print(confusion_matrix(y_test, y_pred))
+print(classification_report(y_test, y_pred, digits=3))'''},
+                {"type": "text", "md": "Le bon choix dépend du coût de l'erreur. Pour un dépistage médical, on privilégie le **rappel** (ne laisser passer aucun cas) ; pour un filtre antispam, la **précision** (ne pas jeter un vrai message)."},
+                {"type": "quiz", "id": "q1", "question": "Détection de fraude, 0,1 % de cas positifs. Quelle métrique regarder ?", "choices": ["L'exactitude", "Le rappel et la précision (ou le F1)", "Le R²", "L'erreur quadratique moyenne"], "answer": "Le rappel et la précision (ou le F1)", "explanation": "Sur un déséquilibre aussi fort, l'exactitude ne dit rien."},
             ],
         },
     ],
     "exercises": [
         {
             "slug": "tp-metriques",
-            "title": "TP - Calculer precision, rappel et F1",
+            "title": "Calculer précision, rappel et F1",
             "kind": "python",
             "difficulty": "facile",
-            "statement": "Sans scikit-learn, implementez les metriques de classification binaire. `y_vrai` et `y_pred` sont des listes de 0/1 de meme longueur.\n\n- `matrice_confusion(y_vrai, y_pred)` -> `{\"vp\": ..., \"fp\": ..., \"vn\": ..., \"fn\": ...}`\n- `precision(y_vrai, y_pred)` -> `vp / (vp + fp)`, et `0.0` si le denominateur est nul.\n- `rappel(y_vrai, y_pred)` -> `vp / (vp + fn)`, et `0.0` si nul.\n- `f1(y_vrai, y_pred)` -> moyenne harmonique, `0.0` si precision et rappel sont nuls.",
-            "starter_code": "def matrice_confusion(y_vrai, y_pred):\n    ...\n\n\ndef precision(y_vrai, y_pred):\n    ...\n\n\ndef rappel(y_vrai, y_pred):\n    ...\n\n\ndef f1(y_vrai, y_pred):\n    ...\n",
-            "solution": "def matrice_confusion(y_vrai, y_pred):\n    m = {\"vp\": 0, \"fp\": 0, \"vn\": 0, \"fn\": 0}\n    for vrai, pred in zip(y_vrai, y_pred):\n        if vrai == 1 and pred == 1:\n            m[\"vp\"] += 1\n        elif vrai == 0 and pred == 1:\n            m[\"fp\"] += 1\n        elif vrai == 0 and pred == 0:\n            m[\"vn\"] += 1\n        else:\n            m[\"fn\"] += 1\n    return m\n\n\ndef precision(y_vrai, y_pred):\n    m = matrice_confusion(y_vrai, y_pred)\n    denominateur = m[\"vp\"] + m[\"fp\"]\n    return m[\"vp\"] / denominateur if denominateur else 0.0\n\n\ndef rappel(y_vrai, y_pred):\n    m = matrice_confusion(y_vrai, y_pred)\n    denominateur = m[\"vp\"] + m[\"fn\"]\n    return m[\"vp\"] / denominateur if denominateur else 0.0\n\n\ndef f1(y_vrai, y_pred):\n    p, r = precision(y_vrai, y_pred), rappel(y_vrai, y_pred)\n    return 2 * p * r / (p + r) if (p + r) else 0.0\n",
+            "statement": '''Sans scikit-learn, écrivez les métriques d'une classification binaire. `y_vrai` et `y_pred` sont deux listes de 0 et de 1, de même longueur.
+
+- `matrice_confusion(y_vrai, y_pred)` renvoie `{"vp": ..., "fp": ..., "vn": ..., "fn": ...}` ;
+- `precision(y_vrai, y_pred)` renvoie `vp / (vp + fp)`, et `0.0` si le dénominateur est nul ;
+- `rappel(y_vrai, y_pred)` renvoie `vp / (vp + fn)`, et `0.0` si le dénominateur est nul ;
+- `f1(y_vrai, y_pred)` renvoie la moyenne harmonique des deux, et `0.0` si elles sont nulles toutes les deux.''',
+            "starter_code": '''def matrice_confusion(y_vrai, y_pred):
+    ...
+
+
+def precision(y_vrai, y_pred):
+    ...
+
+
+def rappel(y_vrai, y_pred):
+    ...
+
+
+def f1(y_vrai, y_pred):
+    ...
+''',
+            "solution": '''def matrice_confusion(y_vrai, y_pred):
+    m = {"vp": 0, "fp": 0, "vn": 0, "fn": 0}
+    for vrai, pred in zip(y_vrai, y_pred):
+        if vrai == 1 and pred == 1:
+            m["vp"] += 1
+        elif vrai == 0 and pred == 1:
+            m["fp"] += 1
+        elif vrai == 0 and pred == 0:
+            m["vn"] += 1
+        else:
+            m["fn"] += 1
+    return m
+
+
+def precision(y_vrai, y_pred):
+    m = matrice_confusion(y_vrai, y_pred)
+    denominateur = m["vp"] + m["fp"]
+    return m["vp"] / denominateur if denominateur else 0.0
+
+
+def rappel(y_vrai, y_pred):
+    m = matrice_confusion(y_vrai, y_pred)
+    denominateur = m["vp"] + m["fn"]
+    return m["vp"] / denominateur if denominateur else 0.0
+
+
+def f1(y_vrai, y_pred):
+    p, r = precision(y_vrai, y_pred), rappel(y_vrai, y_pred)
+    return 2 * p * r / (p + r) if (p + r) else 0.0
+''',
             "hints": [
                 "Parcourez les deux listes ensemble avec `zip`.",
-                "Reutilisez `matrice_confusion` dans les trois autres fonctions.",
-                "Testez systematiquement le denominateur avant de diviser.",
+                "Réutilisez `matrice_confusion` dans les trois autres fonctions.",
+                "Vérifiez toujours le dénominateur avant de diviser.",
             ],
             "spec": {"tests": [
                 {"name": "confusion", "code": "assert matrice_confusion([1,0,1,0], [1,1,0,0]) == {'vp': 1, 'fp': 1, 'vn': 1, 'fn': 1}"},
@@ -56,20 +130,47 @@ COURSE = {
         },
         {
             "slug": "tp-knn",
-            "title": "TP - Un k-NN a la main",
+            "title": "Les k plus proches voisins, à la main",
             "kind": "python",
             "difficulty": "difficile",
-            "statement": "Le k plus proches voisins est l'algorithme supervise le plus simple : aucune phase d'apprentissage, on compare aux exemples connus.\n\nImplementez :\n\n- `distance(a, b)` : distance euclidienne entre deux points (tuples de meme dimension).\n- `predire(entrainement, point, k=3)` : `entrainement` est une liste de `(point, etiquette)`. Renvoyez l'etiquette majoritaire parmi les `k` plus proches. En cas d'egalite, renvoyez l'etiquette du voisin le plus proche.\n\nAucun import autorise (pas de `math`) : utilisez `** 0.5`.",
-            "starter_code": "def distance(a, b):\n    ...\n\n\ndef predire(entrainement, point, k=3):\n    ...\n",
-            "solution": "def distance(a, b):\n    return sum((x - y) ** 2 for x, y in zip(a, b)) ** 0.5\n\n\ndef predire(entrainement, point, k=3):\n    voisins = sorted(entrainement, key=lambda item: distance(item[0], point))[:k]\n    compte = {}\n    for _, etiquette in voisins:\n        compte[etiquette] = compte.get(etiquette, 0) + 1\n    maximum = max(compte.values())\n    gagnantes = [e for e, n in compte.items() if n == maximum]\n    if len(gagnantes) == 1:\n        return gagnantes[0]\n    return voisins[0][1]\n",
+            "statement": '''Les k plus proches voisins sont l'algorithme supervisé le plus simple : pas de phase d'apprentissage, on compare aux exemples connus.
+
+Écrivez :
+
+- `distance(a, b)` : la distance euclidienne entre deux points (des tuples de même dimension) ;
+- `predire(entrainement, point, k=3)` : `entrainement` est une liste de couples `(point, etiquette)`. Renvoyez l'étiquette majoritaire parmi les `k` plus proches voisins. En cas d'égalité, renvoyez celle du voisin le plus proche.
+
+Aucun import n'est autorisé, pas même `math` : utilisez `** 0.5`.''',
+            "starter_code": '''def distance(a, b):
+    ...
+
+
+def predire(entrainement, point, k=3):
+    ...
+''',
+            "solution": '''def distance(a, b):
+    return sum((x - y) ** 2 for x, y in zip(a, b)) ** 0.5
+
+
+def predire(entrainement, point, k=3):
+    voisins = sorted(entrainement, key=lambda item: distance(item[0], point))[:k]
+    compte = {}
+    for _, etiquette in voisins:
+        compte[etiquette] = compte.get(etiquette, 0) + 1
+    maximum = max(compte.values())
+    gagnantes = [e for e, n in compte.items() if n == maximum]
+    if len(gagnantes) == 1:
+        return gagnantes[0]
+    return voisins[0][1]
+''',
             "hints": [
-                "`sum((x - y) ** 2 for x, y in zip(a, b)) ** 0.5` pour la distance.",
-                "Triez l'ensemble d'entrainement par distance au point, puis coupez a k.",
-                "Comptez les etiquettes dans un dictionnaire, puis gerez l'egalite avec le premier voisin.",
+                "Pour la distance : `sum((x - y) ** 2 for x, y in zip(a, b)) ** 0.5`.",
+                "Triez les exemples par distance au point, puis gardez les `k` premiers.",
+                "Comptez les étiquettes dans un dictionnaire ; en cas d'égalité, le premier voisin décide.",
             ],
             "spec": {"tests": [
                 {"name": "distance", "code": "assert abs(distance((0, 0), (3, 4)) - 5.0) < 1e-9"},
-                {"name": "distance_3d", "code": "assert abs(distance((1, 1, 1), (1, 1, 1))) < 1e-9"},
+                {"name": "distance_nulle", "code": "assert abs(distance((1, 1, 1), (1, 1, 1))) < 1e-9"},
                 {"name": "predire_simple", "code": "train = [((0, 0), 'a'), ((0, 1), 'a'), ((10, 10), 'b')]\nassert predire(train, (0, 0.5), k=3) == 'a'"},
                 {"name": "predire_k1", "code": "train = [((0, 0), 'a'), ((10, 10), 'b')]\nassert predire(train, (9, 9), k=1) == 'b'"},
                 {"name": "egalite", "code": "train = [((0, 0), 'a'), ((5, 0), 'b')]\nassert predire(train, (1, 0), k=2) == 'a'"},

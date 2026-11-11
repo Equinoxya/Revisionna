@@ -1,0 +1,386 @@
+/* --- Monogramme d'un cours : l'onglet de couleur du cahier ---------------------- */
+
+.monogramme {
+  --couleur: var(--cat-autre);
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  min-width: 2.7rem;
+  height: 2.7rem;
+  padding: 0 0.35rem;
+  font-family: var(--titres);
+  font-weight: 700;
+  font-size: 0.98rem;
+  letter-spacing: -0.02em;
+  color: var(--encre);
+  background: var(--papier);
+  border: 1.5px solid var(--encre);
+  border-bottom: 5px solid var(--couleur);
+  border-radius: 2px;
+}
+
+.monogramme.grand {
+  min-width: 4.2rem;
+  height: 4.2rem;
+  font-size: 1.45rem;
+  border-bottom-width: 8px;
+}
+
+.cat-langage { --couleur: var(--cat-langage); }
+.cat-backend { --couleur: var(--cat-backend); }
+.cat-frontend { --couleur: var(--cat-frontend); }
+.cat-donnees { --couleur: var(--cat-donnees); }
+.cat-ia { --couleur: var(--cat-ia); }
+.cat-devops { --couleur: var(--cat-devops); }
+
+/* --- La note, entourée au stylo rouge ------------------------------------------- */
+
+.note {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  min-width: 6.2rem;
+  padding: 0.55rem 1.1rem 0.75rem;
+  color: var(--rouge);
+  transform: rotate(-4deg);
+}
+
+.note svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.note path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: tracer 0.7s ease-out both;
+}
+
+.note .valeur {
+  position: relative;
+  font-family: var(--cursive);
+  font-size: 1.25rem;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.note.grande {
+  min-width: 8.4rem;
+  padding: 0.8rem 1.5rem 1.1rem;
+}
+
+.note.grande .valeur {
+  font-size: 1.75rem;
+}
+
+@keyframes tracer {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* --- Coches et croix du correcteur ----------------------------------------------- */
+
+.marque-ok { color: var(--vert); }
+.marque-ko { color: var(--rouge); }
+
+.pastille {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 1.55rem;
+  height: 1.55rem;
+  border: 1.5px solid var(--trait-fort);
+  border-radius: 50%;
+  color: var(--vert);
+}
+
+.pastille.faite {
+  border-color: var(--vert);
+}
+
+.etiquette {
+  display: inline-block;
+  font-family: var(--titres);
+  font-weight: 650;
+  font-size: 0.74rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.12rem 0.45rem 0.08rem;
+  border: 1.5px solid var(--encre);
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+.difficulte {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  color: var(--encre-2);
+  white-space: nowrap;
+}
+
+.difficulte .points {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.difficulte i {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--encre-2);
+}
+
+.difficulte i.plein {
+  background: var(--encre-2);
+}
+
+/* --- Texte des leçons et des énoncés ---------------------------------------------- */
+
+.prose {
+  max-width: var(--mesure);
+}
+
+.prose ul,
+.prose ol {
+  padding-left: 1.3rem;
+  margin: 0 0 1em;
+}
+
+.prose li {
+  margin-bottom: 0.35em;
+}
+
+.prose li::marker {
+  color: var(--rouge);
+  font-weight: 700;
+}
+
+.prose code {
+  background: var(--papier-2);
+  padding: 0.08em 0.36em;
+  border-radius: 3px;
+}
+
+.prose pre code {
+  background: none;
+  padding: 0;
+}
+
+.prose blockquote {
+  margin: 1.2em 0;
+  padding: 0.1em 0 0.1em 1.1em;
+  border-left: 3px solid var(--bleu);
+  color: var(--encre-2);
+  font-style: italic;
+}
+
+.prose blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+.defilable {
+  overflow-x: auto;
+  margin: 1.2em 0;
+}
+
+.prose table,
+.tableau {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.96rem;
+}
+
+.prose th,
+.prose td,
+.tableau th,
+.tableau td {
+  text-align: left;
+  padding: 0.45rem 0.9rem 0.45rem 0;
+  border-bottom: 1px solid var(--trait);
+  vertical-align: top;
+}
+
+.prose thead th,
+.tableau thead th {
+  font-family: var(--titres);
+  font-weight: 650;
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--encre-2);
+  border-bottom: 1.5px solid var(--encre);
+  white-space: nowrap;
+}
+
+/* --- Blocs de code : un listing imprimé -------------------------------------------- */
+
+.listing {
+  position: relative;
+  margin: 1.3em 0;
+  background: var(--papier-2);
+  border-left: 3px solid var(--encre);
+}
+
+.listing.prose {
+  max-width: calc(var(--mesure) + 5rem);
+}
+
+.listing pre {
+  margin: 0;
+  padding: 0.95rem 1.1rem;
+  overflow-x: auto;
+  line-height: 1.55;
+  tab-size: 4;
+}
+
+.listing .langage {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-family: var(--titres);
+  font-weight: 650;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--papier);
+  background: var(--encre);
+  padding: 0.1rem 0.5rem;
+}
+
+/* --- Annotation en marge (à retenir / attention) ------------------------------------ */
+
+.annotation {
+  max-width: var(--mesure);
+  margin: 1.5em 0;
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  border-left: 2px solid var(--bleu);
+}
+
+.annotation.attention {
+  border-left-color: var(--rouge);
+}
+
+.annotation .titre-annotation {
+  display: block;
+  font-family: var(--cursive);
+  font-size: 0.98rem;
+  line-height: 1.7;
+  color: var(--bleu);
+  margin-bottom: 0.15rem;
+}
+
+.annotation.attention .titre-annotation {
+  color: var(--rouge);
+}
+
+.annotation p:last-child {
+  margin-bottom: 0;
+}
+
+/* --- Questions ------------------------------------------------------------------------ */
+
+.question {
+  position: relative;
+  max-width: var(--mesure);
+  margin: 1.8em 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+.question legend {
+  font-family: var(--titres);
+  font-weight: 620;
+  font-size: 1.08rem;
+  line-height: 1.35;
+  padding: 0;
+  margin-bottom: 0.6rem;
+}
+
+.question .numero {
+  color: var(--rouge);
+  margin-right: 0.4rem;
+}
+
+.choix {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.42rem 0.6rem;
+  margin: 0 -0.6rem;
+  border-radius: var(--rayon);
+  cursor: pointer;
+}
+
+.choix:hover {
+  background: var(--papier-2);
+}
+
+.choix input {
+  flex: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin: 0.28rem 0 0;
+  accent-color: var(--bleu);
+}
+
+.question[data-corrige] .choix {
+  cursor: default;
+}
+
+.question[data-corrige] .choix:hover {
+  background: none;
+}
+
+.choix.bonne {
+  box-shadow: inset 0 -2px 0 var(--vert);
+}
+
+.choix.mauvaise {
+  text-decoration: line-through;
+  text-decoration-color: var(--rouge);
+  text-decoration-thickness: 2px;
+}
+
+.choix .verdict {
+  flex: none;
+  margin-left: auto;
+  padding-top: 0.15rem;
+}
+
+/* La coche du correcteur, dans la marge quand la place le permet. */
+.question .en-marge {
+  display: none;
+}
+
+@media (min-width: 760px) {
+  .question .en-marge {
+    display: block;
+    position: absolute;
+    top: -0.15rem;
+    left: calc(-1 * (var(--gouttiere) + 48px));
+    width: 34px;
+    transform: rotate(-6deg);
+  }
+}
+
+.correction {
+  margin: 0.7rem 0 0;
+  color: var(--encre-2);
+  font-size: 0.98rem;
+}
+
+.correction .cursive {
+  color: var(--rouge);
+  font-size: 0.95rem;
+  margin-right: 0.35rem;
+}

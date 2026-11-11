@@ -1,4 +1,4 @@
-"""Chargement idempotent du catalogue de cours."""
+"""Chargement du catalogue de cours. Peut être rejoué sans risque."""
 from ..extensions import db
 from ..models import Course, Exercise, Lesson
 from . import (
@@ -31,7 +31,7 @@ CATALOG = [
 
 
 def load(reset: bool = False) -> dict:
-    """Insere ou met a jour les cours du catalogue. Ne touche pas aux utilisateurs."""
+    """Insère ou met à jour les cours du catalogue. Ne touche ni aux comptes ni à la progression."""
     db.create_all()
 
     if reset:
@@ -50,8 +50,8 @@ def load(reset: bool = False) -> dict:
         course.title = spec["title"]
         course.summary = spec.get("summary", "")
         course.category = spec.get("category", "Autre")
-        course.level = spec.get("level", "debutant")
-        course.icon = spec.get("icon", "📘")
+        course.level = spec.get("level", "débutant")
+        course.icon = spec.get("icon", "")
         course.position = position
         db.session.flush()
         counts["courses"] += 1

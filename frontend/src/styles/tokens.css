@@ -1,0 +1,90 @@
+/* Deux ambiances, un seul jeu de noms.
+   Clair  : le cahier d'écolier (papier, encre bleue, stylo rouge, surligneur).
+   Sombre : le tableau noir (ardoise verte, craies de couleur). */
+
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --papier: #fcfbf7;
+  --papier-2: #f4f1e8;
+  --papier-3: #ebe6d9;
+  --encre: #1b2440;
+  --encre-2: #4b556f;
+  --trait: rgba(27, 36, 64, 0.16);
+  --trait-fort: rgba(27, 36, 64, 0.34);
+
+  --bleu: #2743c9;          /* encre bleue : liens, actions */
+  --rouge: #b92f26;         /* stylo rouge : marge, corrections */
+  --vert: #1c7347;          /* validé */
+  --surligneur: #ffe45c;
+  --sur-surligneur: #1b2440;
+  --sur-bleu: #ffffff;
+
+  --seyes: rgba(86, 120, 210, 0.16);
+  --seyes-fort: rgba(86, 120, 210, 0.32);
+  --marge: rgba(196, 53, 43, 0.5);
+
+  /* un protège-cahier par famille de cours */
+  --cat-langage: #2f6fd6;
+  --cat-backend: #2e8b57;
+  --cat-frontend: #e07b1a;
+  --cat-donnees: #7a54c7;
+  --cat-ia: #d6457f;
+  --cat-devops: #c79a12;
+  --cat-autre: #7c8499;
+
+  --ombre: 0 1px 0 rgba(27, 36, 64, 0.06), 0 10px 30px -18px rgba(27, 36, 64, 0.35);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --papier: #17231e;
+  --papier-2: #1e2d27;
+  --papier-3: #273931;
+  --encre: #edebe2;
+  --encre-2: #adb9b0;
+  --trait: rgba(237, 235, 226, 0.16);
+  --trait-fort: rgba(237, 235, 226, 0.36);
+
+  --bleu: #a3c8f8;          /* craie bleue */
+  --rouge: #f49a90;         /* craie rose */
+  --vert: #a9dba2;          /* craie verte */
+  --surligneur: #f2d56e;    /* craie jaune */
+  --sur-surligneur: #17231e;
+  --sur-bleu: #10201a;
+
+  --seyes: rgba(237, 235, 226, 0.055);
+  --seyes-fort: rgba(237, 235, 226, 0.11);
+  --marge: rgba(244, 154, 144, 0.42);
+
+  --cat-langage: #8ab6f5;
+  --cat-backend: #8fd3a6;
+  --cat-frontend: #f2b06b;
+  --cat-donnees: #c2a8f2;
+  --cat-ia: #f29bbf;
+  --cat-devops: #ecd06a;
+  --cat-autre: #adb9b0;
+
+  --ombre: 0 1px 0 rgba(0, 0, 0, 0.25), 0 14px 34px -18px rgba(0, 0, 0, 0.7);
+}
+
+:root {
+  --titres: "Bricolage Grotesque Variable", "Trebuchet MS", system-ui, sans-serif;
+  --texte: "Atkinson Hyperlegible Next Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Atkinson Hyperlegible Mono Variable", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --cursive: "Playwrite FR Moderne", "Segoe Script", "Bradley Hand", cursive;
+
+  --marge-x: 20px;          /* position de la ligne de marge */
+  --gouttiere: 16px;        /* entre la marge et le texte */
+  --mesure: 68ch;           /* largeur de lecture confortable */
+  --rayon: 3px;
+}
+
+@media (min-width: 760px) {
+  :root {
+    --marge-x: 76px;
+    --gouttiere: 34px;
+  }
+}

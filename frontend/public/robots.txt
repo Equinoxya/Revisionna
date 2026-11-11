@@ -1,0 +1,3 @@
+# Site d'entraînement privé : rien à indexer.
+User-agent: *
+Disallow: /

@@ -1,73 +1,167 @@
 COURSE = {
     "slug": "docker",
     "title": "Docker et Docker Compose",
-    "summary": "Images, couches, build multi-stage, volumes, reseaux, orchestration locale.",
+    "summary": "Images, couches, construction en plusieurs étapes, volumes, réseaux, isolation et orchestration locale.",
     "category": "DevOps",
-    "level": "intermediaire",
-    "icon": "🐳",
+    "level": "intermédiaire",
+    "icon": "Dk",
     "lessons": [
         {
             "slug": "images-et-couches",
-            "title": "Images, couches et cache de build",
+            "title": "Images, couches et cache de construction",
             "duration_min": 20,
             "blocks": [
-                {"type": "text", "md": "Une **image** est un modele en lecture seule, un **conteneur** est une instance en execution. Chaque instruction du Dockerfile cree une **couche** mise en cache : si une couche change, toutes les suivantes sont reconstruites.\n\nD'ou la regle d'or : **copier les dependances avant le code**."},
-                {"type": "code", "lang": "dockerfile", "code": "FROM python:3.12-slim\n\nENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1\nWORKDIR /app\n\n# 1. dependances seules -> cache conserve tant que requirements.txt ne change pas\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\n\n# 2. le code, qui change a chaque commit\nCOPY . .\n\nRUN useradd -m app && chown -R app:app /app\nUSER app\n\nEXPOSE 5000\nCMD [\"gunicorn\", \"-b\", \"0.0.0.0:5000\", \"wsgi:app\"]"},
-                {"type": "text", "md": "Le **multi-stage build** compile dans une image lourde et ne garde que le resultat dans une image legere. C'est le Dockerfile du frontend de cette application : Node construit, nginx sert."},
-                {"type": "code", "lang": "dockerfile", "code": "FROM node:20-alpine AS build\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci\nCOPY . .\nRUN npm run build\n\nFROM nginx:1.27-alpine\nCOPY --from=build /app/dist /usr/share/nginx/html"},
-                {"type": "callout", "tone": "warn", "md": "`CMD` est remplacable par la ligne de commande, `ENTRYPOINT` non. Et sans `.dockerignore`, vous envoyez `node_modules` et `.git` au daemon : build lent et image polluee."},
-                {"type": "quiz", "id": "q1", "question": "Pourquoi copier requirements.txt avant le reste du code ?", "choices": ["Pour la lisibilite", "Pour conserver le cache des dependances entre deux builds", "C'est obligatoire", "Pour reduire le nombre de couches"], "answer": "Pour conserver le cache des dependances entre deux builds", "explanation": "Une modification du code n'invalide alors pas l'installation des dependances."},
-                {"type": "quiz", "id": "q2", "question": "Difference image / conteneur ?", "choices": ["Aucune", "L'image est le modele, le conteneur l'instance en execution", "Le conteneur est plus gros", "L'image s'execute"], "answer": "L'image est le modele, le conteneur l'instance en execution", "explanation": "Comme une classe et ses instances."},
+                {"type": "text", "md": '''Une **image** est un modèle en lecture seule ; un **conteneur** en est une instance qui tourne. Chaque instruction du Dockerfile crée une **couche**, mise en cache : dès qu'une couche change, toutes les suivantes sont reconstruites.
+
+D'où la règle d'or : **copier les dépendances avant le code**.'''},
+                {"type": "code", "lang": "dockerfile", "code": '''FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+WORKDIR /app
+
+# 1. les dépendances seules : cache conservé tant que requirements.txt ne bouge pas
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 2. le code, qui change à chaque commit
+COPY . .
+
+RUN useradd --create-home app && chown -R app:app /app
+USER app
+
+EXPOSE 5000
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "wsgi:app"]'''},
+                {"type": "text", "md": "La **construction en plusieurs étapes** (*multi-stage build*) compile dans une image lourde, puis ne garde que le résultat dans une image légère. C'est le Dockerfile du frontend de cette application : Node construit, nginx sert."},
+                {"type": "code", "lang": "dockerfile", "code": '''FROM node:22-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM nginxinc/nginx-unprivileged:stable-alpine
+COPY --from=build /app/dist /usr/share/nginx/html'''},
+                {"type": "callout", "tone": "warn", "md": "`CMD` peut être remplacée depuis la ligne de commande, `ENTRYPOINT` non. Et sans fichier `.dockerignore`, vous envoyez `node_modules` et `.git` au moteur Docker : construction lente, image encombrée, et parfois des secrets embarqués."},
+                {"type": "quiz", "id": "q1", "question": "Pourquoi copier requirements.txt avant le reste du code ?", "choices": ["Pour la lisibilité", "Pour conserver le cache des dépendances d'une construction à l'autre", "C'est obligatoire", "Pour réduire le nombre de couches"], "answer": "Pour conserver le cache des dépendances d'une construction à l'autre", "explanation": "Modifier le code n'oblige plus à réinstaller les dépendances."},
+                {"type": "quiz", "id": "q2", "question": "Quelle différence entre une image et un conteneur ?", "choices": ["Aucune", "L'image est le modèle, le conteneur l'instance qui tourne", "Le conteneur est plus volumineux", "L'image s'exécute"], "answer": "L'image est le modèle, le conteneur l'instance qui tourne", "explanation": "Comme une classe et ses instances."},
             ],
         },
         {
             "slug": "compose-volumes-reseaux",
-            "title": "Compose, volumes et reseaux",
+            "title": "Compose, volumes, réseaux et isolation",
             "duration_min": 20,
             "blocks": [
-                {"type": "text", "md": "Compose decrit une pile de services dans un fichier. Chaque service est joignable par **son nom** sur le reseau interne : l'API se connecte a `db:5432`, pas a `localhost`."},
-                {"type": "code", "lang": "yaml", "code": "services:\n  db:\n    image: postgres:16-alpine\n    environment:\n      POSTGRES_PASSWORD: revisionna\n    volumes:\n      - pgdata:/var/lib/postgresql/data\n    healthcheck:\n      test: [\"CMD-SHELL\", \"pg_isready -U revisionna\"]\n      interval: 5s\n      retries: 10\n\n  api:\n    build: ./backend\n    environment:\n      DATABASE_URL: postgresql+psycopg2://revisionna:revisionna@db:5432/revisionna\n    depends_on:\n      db:\n        condition: service_healthy\n    ports:\n      - \"5000:5000\"\n\nvolumes:\n  pgdata:"},
-                {"type": "callout", "tone": "warn", "md": "`depends_on` seul attend le **demarrage** du conteneur, pas la disponibilite du service. Sans `healthcheck` + `condition: service_healthy`, l'API demarre avant que Postgres accepte les connexions."},
-                {"type": "text", "md": "Un **volume** survit au conteneur : c'est la seule facon de garder des donnees. Tout ce qui est ecrit dans le systeme de fichiers du conteneur disparait a sa suppression."},
-                {"type": "quiz", "id": "q1", "question": "Comment l'API joint-elle la base dans Compose ?", "choices": ["localhost:5432", "db:5432 (le nom du service)", "127.0.0.1:5432", "L'IP du conteneur"], "answer": "db:5432 (le nom du service)", "explanation": "Compose fournit une resolution DNS par nom de service."},
-                {"type": "quiz", "id": "q2", "question": "Que perd-on sans volume sur la base ?", "choices": ["Rien", "Les donnees a chaque suppression du conteneur", "Les logs seulement", "La configuration"], "answer": "Les donnees a chaque suppression du conteneur", "explanation": "La couche d'ecriture du conteneur est ephemere."},
+                {"type": "text", "md": "Compose décrit un ensemble de services dans un seul fichier. Sur le réseau interne, chaque service est joignable par **son nom** : l'API se connecte à `db:5432`, pas à `localhost`."},
+                {"type": "code", "lang": "yaml", "code": '''services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?à définir dans .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U revisionna"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:'''},
+                {"type": "callout", "tone": "warn", "md": "`depends_on` seul attend le **démarrage** du conteneur, pas la disponibilité du service. Sans `healthcheck` et `condition: service_healthy`, l'API démarre avant que PostgreSQL accepte les connexions."},
+                {"type": "text", "md": "Un **volume** survit au conteneur : c'est le seul moyen de conserver des données. Tout ce qui est écrit ailleurs disparaît avec le conteneur."},
+                {"type": "text", "md": '''Un conteneur sert aussi à **enfermer** ce en quoi on n'a pas confiance. Dans cette application, le code que vous soumettez s'exécute dans un service à part (`runner`), réglé ainsi :
+
+```yaml
+  runner:
+    network_mode: none      # aucun réseau : ni base, ni Internet
+    read_only: true         # système de fichiers en lecture seule
+    cap_drop: [ALL]         # privilèges retirés
+    pids_limit: 256         # pas de bombe de processus
+```
+
+Il ne reçoit aucun secret, et l'API lui parle par un simple socket Unix posé sur un volume partagé.'''},
+                {"type": "quiz", "id": "q1", "question": "Dans Compose, comment l'API joint-elle la base ?", "choices": ["localhost:5432", "db:5432, le nom du service", "127.0.0.1:5432", "Par l'adresse IP du conteneur"], "answer": "db:5432, le nom du service", "explanation": "Compose fournit une résolution de noms entre services."},
+                {"type": "quiz", "id": "q2", "question": "Que perd-on sans volume sur la base ?", "choices": ["Rien", "Les données, à chaque suppression du conteneur", "Seulement les journaux", "La configuration"], "answer": "Les données, à chaque suppression du conteneur", "explanation": "L'espace d'écriture d'un conteneur est éphémère."},
             ],
         },
     ],
     "exercises": [
         {
             "slug": "tp-ordre-dockerfile",
-            "title": "TP - Ordonner un Dockerfile pour le cache",
+            "title": "Ordonner un Dockerfile pour le cache",
             "kind": "python",
             "difficulty": "moyen",
-            "statement": "On vous donne les instructions d'un Dockerfile en desordre. Ecrivez `ordonner(instructions)` qui renvoie la liste triee selon la bonne pratique de cache.\n\nPriorite (du plus stable au plus volatil) :\n\n1. `FROM`\n2. `ENV`\n3. `WORKDIR`\n4. `COPY requirements.txt` (toute instruction COPY contenant `requirements`)\n5. `RUN pip install` (toute instruction RUN)\n6. `COPY . .` (les autres COPY)\n7. `EXPOSE`\n8. `CMD`\n\nA priorite egale, conservez l'ordre d'origine. Une instruction dont le mot-cle n'est pas dans la liste va a la fin.",
-            "starter_code": "def ordonner(instructions):\n    ...\n",
-            "solution": "def ordonner(instructions):\n    def rang(ligne):\n        mot = ligne.split()[0].upper()\n        if mot == \"FROM\":\n            return 0\n        if mot == \"ENV\":\n            return 1\n        if mot == \"WORKDIR\":\n            return 2\n        if mot == \"COPY\":\n            return 3 if \"requirements\" in ligne else 5\n        if mot == \"RUN\":\n            return 4\n        if mot == \"EXPOSE\":\n            return 6\n        if mot == \"CMD\":\n            return 7\n        return 99\n\n    return [ligne for _, _, ligne in sorted(\n        ((rang(l), i, l) for i, l in enumerate(instructions)),\n        key=lambda item: (item[0], item[1]),\n    )]\n",
+            "statement": '''On vous donne les instructions d'un Dockerfile dans le désordre. Écrivez `ordonner(instructions)`, qui renvoie la liste triée selon la bonne pratique de cache.
+
+Priorité, du plus stable au plus changeant :
+
+1. `FROM`
+2. `ENV`
+3. `WORKDIR`
+4. `COPY requirements.txt` (toute instruction `COPY` contenant `requirements`)
+5. `RUN pip install` (toute instruction `RUN`)
+6. `COPY . .` (les autres `COPY`)
+7. `EXPOSE`
+8. `CMD`
+
+À priorité égale, conservez l'ordre d'origine. Une instruction dont le mot-clé n'est pas dans la liste va à la fin.''',
+            "starter_code": '''def ordonner(instructions):
+    ...
+''',
+            "solution": '''def ordonner(instructions):
+    def rang(ligne):
+        mot = ligne.split()[0].upper()
+        if mot == "FROM":
+            return 0
+        if mot == "ENV":
+            return 1
+        if mot == "WORKDIR":
+            return 2
+        if mot == "COPY":
+            return 3 if "requirements" in ligne else 5
+        if mot == "RUN":
+            return 4
+        if mot == "EXPOSE":
+            return 6
+        if mot == "CMD":
+            return 7
+        return 99
+
+    return [ligne for _, _, ligne in sorted(
+        ((rang(l), i, l) for i, l in enumerate(instructions)),
+        key=lambda item: (item[0], item[1]),
+    )]
+''',
             "hints": [
-                "Ecrivez une fonction interne qui renvoie un rang numerique par instruction.",
-                "Le cas COPY depend de la presence du mot `requirements` dans la ligne.",
-                "Pour un tri stable a rang egal, triez sur `(rang, index)`.",
+                "Écrivez une fonction interne qui donne un rang numérique à chaque instruction.",
+                "Pour `COPY`, tout dépend de la présence du mot `requirements` dans la ligne.",
+                "Pour un tri qui respecte l'ordre d'origine à rang égal, triez sur `(rang, index)`.",
             ],
             "spec": {"tests": [
                 {"name": "ordre_de_base", "code": "ins = ['COPY . .', 'FROM python:3.12-slim', 'RUN pip install -r requirements.txt', 'COPY requirements.txt .']\nassert ordonner(ins) == ['FROM python:3.12-slim', 'COPY requirements.txt .', 'RUN pip install -r requirements.txt', 'COPY . .']"},
                 {"name": "cmd_en_dernier", "code": "ins = ['CMD [\"gunicorn\"]', 'FROM python', 'EXPOSE 5000']\nassert ordonner(ins)[-1].startswith('CMD')"},
                 {"name": "workdir_et_env", "code": "ins = ['WORKDIR /app', 'ENV A=1', 'FROM python']\nassert ordonner(ins) == ['FROM python', 'ENV A=1', 'WORKDIR /app']"},
-                {"name": "inconnu_a_la_fin", "code": "ins = ['LABEL x=1', 'FROM python']\nassert ordonner(ins)[-1] == 'LABEL x=1'"},
-                {"name": "stabilite", "code": "ins = ['RUN a', 'RUN b', 'FROM python']\nassert ordonner(ins) == ['FROM python', 'RUN a', 'RUN b']"},
+                {"name": "inconnue_a_la_fin", "code": "ins = ['LABEL x=1', 'FROM python']\nassert ordonner(ins)[-1] == 'LABEL x=1'"},
+                {"name": "ordre_conserve", "code": "ins = ['RUN a', 'RUN b', 'FROM python']\nassert ordonner(ins) == ['FROM python', 'RUN a', 'RUN b']"},
             ]},
         },
         {
             "slug": "quiz-docker",
-            "title": "Quiz - Docker au quotidien",
+            "title": "Docker au quotidien",
             "kind": "quiz",
             "difficulty": "facile",
-            "statement": "Les commandes et notions a avoir en tete.",
+            "statement": "Les commandes et les notions à avoir en tête.",
             "spec": {"questions": [
-                {"id": "1", "question": "Quelle commande construit une image nommee api ?", "choices": ["docker run -t api .", "docker build -t api .", "docker compose exec api", "docker pull api"], "answer": "docker build -t api .", "explanation": "-t pose le tag, le point est le contexte de build."},
-                {"id": "2", "question": "A quoi sert .dockerignore ?", "choices": ["Ignorer des conteneurs", "Exclure des fichiers du contexte de build", "Masquer des variables", "Desactiver le cache"], "answer": "Exclure des fichiers du contexte de build", "explanation": "On y met .git, node_modules, .venv, .env."},
-                {"id": "3", "question": "Pourquoi un USER non-root dans l'image ?", "choices": ["Pour la performance", "Pour limiter l'impact d'une compromission", "C'est obligatoire", "Pour reduire la taille"], "answer": "Pour limiter l'impact d'une compromission", "explanation": "Principe du moindre privilege."},
-                {"id": "4", "question": "Que fait `docker compose down -v` ?", "choices": ["Arrete les services", "Arrete les services ET supprime les volumes (donc les donnees)", "Redemarre la pile", "Affiche les logs"], "answer": "Arrete les services ET supprime les volumes (donc les donnees)", "explanation": "-v detruit les volumes nommes : irreversible."},
-                {"id": "5", "question": "Interet du multi-stage build ?", "choices": ["Builder plus vite uniquement", "Ne garder que l'artefact final dans une image legere", "Avoir plusieurs conteneurs", "Eviter les volumes"], "answer": "Ne garder que l'artefact final dans une image legere", "explanation": "Les outils de compilation restent dans l'etape de build."},
+                {"id": "1", "question": "Quelle commande construit une image nommée api ?", "choices": ["docker run -t api .", "docker build -t api .", "docker compose exec api", "docker pull api"], "answer": "docker build -t api .", "explanation": "`-t` donne son nom à l'image ; le point désigne le dossier envoyé au moteur."},
+                {"id": "2", "question": "À quoi sert le fichier .dockerignore ?", "choices": ["À ignorer des conteneurs", "À exclure des fichiers de la construction", "À masquer des variables", "À désactiver le cache"], "answer": "À exclure des fichiers de la construction", "explanation": "On y met `.git`, `node_modules`, `.venv`, `.env`."},
+                {"id": "3", "question": "Pourquoi un utilisateur non root dans l'image ?", "choices": ["Pour la performance", "Pour limiter les dégâts si le conteneur est compromis", "C'est obligatoire", "Pour réduire la taille"], "answer": "Pour limiter les dégâts si le conteneur est compromis", "explanation": "C'est le principe du moindre privilège."},
+                {"id": "4", "question": "Que fait `docker compose down -v` ?", "choices": ["Il arrête les services", "Il arrête les services ET supprime les volumes, donc les données", "Il redémarre l'ensemble", "Il affiche les journaux"], "answer": "Il arrête les services ET supprime les volumes, donc les données", "explanation": "`-v` détruit les volumes nommés : c'est irréversible."},
+                {"id": "5", "question": "Quel est l'intérêt d'une construction en plusieurs étapes ?", "choices": ["Seulement construire plus vite", "Ne garder que le résultat final, dans une image légère", "Avoir plusieurs conteneurs", "Se passer de volumes"], "answer": "Ne garder que le résultat final, dans une image légère", "explanation": "Les outils de compilation restent dans l'étape de construction."},
             ]},
         },
     ],

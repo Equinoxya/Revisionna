@@ -35,18 +35,27 @@ def test_soumission_python_incorrecte(client, auth, app):
     assert "solution" not in data
 
 
-def test_code_dangereux_refuse(client, auth, app):
+def test_code_eleve_sans_acces_aux_secrets(client, auth, app, monkeypatch):
+    monkeypatch.setenv("JWT_SECRET_KEY", "ne-doit-pas-fuiter")
     with app.app_context():
         ex_id = _exercice("python", "tp-statistiques").id
 
     resp = client.post(
         f"/api/exercises/{ex_id}/submit",
-        json={"code": "import os\nos.listdir('/')\n"},
+        json={"code": "import os\nprint(dict(os.environ))\n"},
         headers=auth,
     )
     data = resp.get_json()
-    assert data["passed"] is False
-    assert "interdit" in data["output"].lower()
+    assert "ne-doit-pas-fuiter" not in str(data)
+
+
+def test_code_trop_long_refuse(client, auth, app):
+    with app.app_context():
+        ex_id = _exercice("python", "tp-statistiques").id
+
+    resp = client.post(f"/api/exercises/{ex_id}/submit",
+                       json={"code": "x = 1\n" * 10_000}, headers=auth)
+    assert resp.status_code == 413
 
 
 def test_boucle_infinie_interrompue(client, auth, app):
@@ -60,7 +69,7 @@ def test_boucle_infinie_interrompue(client, auth, app):
     )
     data = resp.get_json()
     assert data["passed"] is False
-    assert "temps depasse" in data["output"].lower()
+    assert "interrompue" in data["output"] or "Temps dépassé" in data["output"]
 
 
 def test_soumission_sql(client, auth, app):
@@ -129,3 +138,37 @@ def test_indice_sans_fournisseur_ia(client, auth, app):
 def test_exercice_inexistant(client, auth):
     assert client.post("/api/exercises/9999/submit", json={"code": "x = 1"},
                        headers=auth).status_code == 404
+
+
+def test_debit_des_soumissions_limite(client, auth, app, monkeypatch):
+    from app.api import workspace
+
+    monkeypatch.setattr(workspace, "SUBMISSIONS_PER_MINUTE", 2)
+    with app.app_context():
+        ex_id = _exercice("docker", "quiz-docker").id
+
+    codes = [client.post(f"/api/exercises/{ex_id}/submit", json={"answers": {}},
+                         headers=auth).status_code for _ in range(3)]
+    assert codes == [200, 200, 429]
+
+
+def test_correction_refusee_sans_executeur_isole_en_production(client, auth, app):
+    app.config["ALLOW_LOCAL_RUNNER"] = False
+    with app.app_context():
+        ex_id = _exercice("python", "tp-statistiques").id
+
+    data = client.post(f"/api/exercises/{ex_id}/submit", json={"code": "x = 1"},
+                       headers=auth).get_json()
+    assert data["passed"] is False
+    assert "désactivée" in data["output"]
+
+
+def test_service_de_correction_injoignable_signale(client, auth, app, tmp_path):
+    app.config["RUNNER_SOCKET"] = str(tmp_path / "absent.sock")
+    with app.app_context():
+        ex_id = _exercice("python", "tp-statistiques").id
+
+    data = client.post(f"/api/exercises/{ex_id}/submit", json={"code": "x = 1"},
+                       headers=auth).get_json()
+    assert data["passed"] is False
+    assert "indisponible" in data["output"]

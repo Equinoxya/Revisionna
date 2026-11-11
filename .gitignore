@@ -226,3 +226,6 @@ backend/*.db
 backend/instance/
 frontend/node_modules/
 frontend/dist/
+
+# La regle `lib/` du modele Python (plus haut) ignorait aussi le code du frontend.
+!frontend/src/lib/

@@ -1,0 +1,1 @@
+Migrations Alembic (Flask-Migrate). Appliquer : `flask --app wsgi:app init-db`.

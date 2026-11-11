@@ -1,6 +1,6 @@
 line-length = 100
 target-version = "py312"
-exclude = [".venv", "migrations"]
+exclude = [".venv"]
 
 [lint]
 select = ["E", "F", "W", "I", "B", "UP"]
@@ -9,3 +9,4 @@ ignore = ["E501", "B008"]
 [lint.per-file-ignores]
 "app/seed/*.py" = ["E501"]
 "tests/*.py" = ["E731"]
+"migrations/*" = ["E", "W", "I", "UP", "B"]

@@ -1,29 +1,63 @@
-/** Question a choix unique, reutilisee dans les lecons et les exercices quiz. */
-export default function Quiz({ question, choix, valeur, onChange, resultat, nom }) {
-  const etat = resultat ? (resultat.passed ? "juste" : "faux") : "";
+import Icon from "./Icon.jsx";
+import Texte from "./Texte.jsx";
+
+/**
+ * Question à choix unique, pour les leçons et les TP de type QCM.
+ * Une fois corrigée (`resultat`), la bonne réponse est soulignée en vert, une
+ * mauvaise réponse choisie est barrée, et le correcteur laisse un mot.
+ */
+export default function Quiz({ numero, question, choix, valeur, onChange, resultat, nom }) {
+  const corrige = Boolean(resultat);
+  const explication = resultat?.explanation || resultat?.message;
 
   return (
-    <fieldset className={`quiz ${etat}`}>
-      <legend>{question}</legend>
+    <fieldset className="question" data-corrige={corrige ? "" : undefined}>
+      <legend>
+        {numero && <span className="numero">{numero}.</span>}
+        <Texte>{question}</Texte>
+      </legend>
 
-      {choix.map((option) => (
-        <label key={option} className="choix">
-          <input
-            type="radio"
-            name={nom}
-            value={option}
-            checked={valeur === option}
-            onChange={() => onChange(option)}
-            disabled={Boolean(resultat)}
-          />
-          <span>{option}</span>
-        </label>
-      ))}
+      {corrige && (
+        <span className={`en-marge ${resultat.passed ? "marque-ok" : "marque-ko"}`}>
+          <Icon nom={resultat.passed ? "coche" : "croix"} taille={34} />
+        </span>
+      )}
 
-      {resultat && (
-        <p className="retour">
-          {resultat.passed ? "Correct. " : `Incorrect. ${resultat.answer ? `Reponse : ${resultat.answer}. ` : ""}`}
-          {resultat.message || resultat.explanation}
+      {choix.map((option) => {
+        const choisie = valeur === option;
+        const bonne = corrige && resultat.answer === option;
+        const mauvaise = corrige && choisie && !resultat.passed;
+        return (
+          <label key={option} className={`choix${bonne ? " bonne" : ""}${mauvaise ? " mauvaise" : ""}`}>
+            <input
+              type="radio"
+              name={nom}
+              value={option}
+              checked={choisie}
+              onChange={() => onChange(option)}
+              disabled={corrige}
+            />
+            <span>
+              <Texte>{option}</Texte>
+            </span>
+            {bonne && (
+              <span className="verdict marque-ok">
+                <Icon nom="coche" taille={18} titre="Bonne réponse" />
+              </span>
+            )}
+            {mauvaise && (
+              <span className="verdict marque-ko">
+                <Icon nom="croix" taille={18} titre="Mauvaise réponse" />
+              </span>
+            )}
+          </label>
+        );
+      })}
+
+      {corrige && (
+        <p className="correction">
+          <span className="cursive">{resultat.passed ? "Juste." : valeur ? "Faux." : "Sans réponse."}</span>
+          <Texte>{explication}</Texte>
         </p>
       )}
     </fieldset>

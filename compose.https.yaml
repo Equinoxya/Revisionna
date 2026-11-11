@@ -1,0 +1,35 @@
+# HTTPS automatique avec Caddy (certificat Let's Encrypt), à superposer à compose.yaml :
+#
+#   docker compose -f compose.yaml -f compose.https.yaml up -d --build
+#
+# Dans .env : SITE_DOMAIN=revisionna.exemple.fr (le domaine doit pointer vers ce
+# serveur, ports 80 et 443 ouverts) et TRUSTED_PROXIES=2 (Caddy + nginx).
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?Indiquez SITE_DOMAIN dans .env (ex. revisionna.exemple.fr)}
+    command: caddy reverse-proxy --from ${SITE_DOMAIN} --to web:8080
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy:/data
+    depends_on:
+      - web
+    networks:
+      - facade
+
+  web:
+    # nginx n'est plus exposé directement : tout passe par Caddy, en HTTPS.
+    ports: !reset []
+
+volumes:
+  caddy:

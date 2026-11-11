@@ -1,0 +1,168 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-padding-top: 5rem;
+}
+
+body {
+  margin: 0;
+  background: var(--papier);
+  color: var(--encre);
+  font-family: var(--texte);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  font-variant-numeric: lining-nums;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--titres);
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin: 0 0 0.5em;
+  text-wrap: balance;
+}
+
+/* Les grands titres sont soulignés en rouge, à la règle, comme sur un cahier. */
+h1 {
+  font-size: clamp(1.9rem, 1.2rem + 2.6vw, 2.9rem);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: var(--rouge);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
+  text-decoration-skip-ink: none;
+}
+
+h2 {
+  font-size: 1.4rem;
+  margin-top: 2.2em;
+}
+
+h3 {
+  font-size: 1.1rem;
+  margin-top: 1.6em;
+}
+
+p {
+  margin: 0 0 1em;
+}
+
+a {
+  color: var(--bleu);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+strong {
+  font-weight: 700;
+}
+
+code,
+pre,
+kbd,
+textarea.copie {
+  font-family: var(--mono);
+  font-size: 0.92em;
+  font-variant-ligatures: none;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--trait);
+  margin: 2.5rem 0;
+}
+
+::selection {
+  background: var(--surligneur);
+  color: var(--sur-surligneur);
+}
+
+:focus-visible {
+  outline: 2px solid var(--bleu);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* --- Utilitaires ---------------------------------------------------------- */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.cursive {
+  font-family: var(--cursive);
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.9;
+}
+
+.discret {
+  color: var(--encre-2);
+}
+
+.chiffres {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Un coup de surligneur derrière un mot. */
+.surligne {
+  background: linear-gradient(
+    transparent 0.18em,
+    var(--surligneur) 0.18em,
+    var(--surligneur) 1.12em,
+    transparent 1.12em
+  );
+  color: var(--sur-surligneur);
+  padding: 0 0.22em;
+  margin: 0 -0.12em;
+  border-radius: 2px 6px 3px 5px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* Papier Seyès (grands carreaux) : lignes tous les 8 px, renforcées tous les 32 px. */
+.seyes {
+  background-color: var(--papier);
+  background-image:
+    linear-gradient(var(--seyes-fort) 1px, transparent 1px),
+    linear-gradient(var(--seyes) 1px, transparent 1px),
+    linear-gradient(90deg, var(--seyes) 1px, transparent 1px);
+  background-size:
+    100% 32px,
+    100% 8px,
+    32px 100%;
+  background-position: 0 -1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

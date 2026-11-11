@@ -1,65 +1,171 @@
+# Revisionna en production : `make env` (une fois), puis `docker compose up -d --build`.
+# Tous les secrets viennent du fichier .env : il n'y a volontairement aucune
+# valeur par défaut, Compose refuse de démarrer s'il en manque un.
 name: revisionna
+
+x-durci: &durci
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
 
 services:
   db:
     image: postgres:16-alpine
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     environment:
       POSTGRES_USER: revisionna
-      POSTGRES_PASSWORD: revisionna
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Lancez « make env » pour créer le fichier .env}
       POSTGRES_DB: revisionna
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - donnees
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U revisionna -d revisionna"]
       interval: 5s
       timeout: 3s
-      retries: 10
+      retries: 12
 
+  # Journal d'activité (cours NoSQL). Facultatif pour l'application, qui
+  # fonctionne sans ; protégé par mot de passe et invisible de l'extérieur.
   mongo:
     image: mongo:7
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: revisionna
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?Lancez « make env » pour créer le fichier .env}
     volumes:
       - mongodata:/data/db
+    networks:
+      - donnees
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 6
+      start_period: 20s
+
+  # Exécute le code des élèves, et rien d'autre.
+  # Aucun réseau, aucun secret, système de fichiers en lecture seule : même
+  # entièrement compromis, ce conteneur ne mène nulle part.
+  runner:
+    <<: *durci
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.runner
+    image: revisionna-runner:local
+    network_mode: none
+    read_only: true
+    # Root dans le conteneur, mais réduit aux seules capacités nécessaires pour
+    # lancer chaque travail sous un compte jetable et faire le ménage ensuite.
+    cap_add:
+      - SETUID
+      - SETGID
+      - CHOWN
+      - DAC_OVERRIDE
+      - KILL
+    pids_limit: 256
+    mem_limit: 1g
+    cpus: 1.5
+    tmpfs:
+      - /tmp:size=96m,mode=1777
+    environment:
+      RUNNER_SOCKET: /run/sandbox/runner.sock
+      SOCKET_GID: "10001"        # groupe du compte de l'API (voir backend/Dockerfile)
+      SANDBOX_TMP: /tmp/jobs
+      SANDBOX_SLOTS: "3"
+    volumes:
+      - sandbox:/run/sandbox
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s = socket.socket(socket.AF_UNIX); s.settimeout(3); s.connect('/run/sandbox/runner.sock')"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
 
   api:
+    <<: *durci
     build: ./backend
+    image: revisionna-api:local
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
     environment:
       FLASK_ENV: production
-      SECRET_KEY: ${SECRET_KEY:-change-me-en-production}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-aussi}
-      DATABASE_URL: postgresql+psycopg2://revisionna:revisionna@db:5432/revisionna
-      MONGO_URL: mongodb://mongo:27017
+      SECRET_KEY: ${SECRET_KEY:?Lancez « make env » pour créer le fichier .env}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Lancez « make env » pour créer le fichier .env}
+      DATABASE_URL: postgresql+psycopg2://revisionna:${POSTGRES_PASSWORD}@db:5432/revisionna
+      MONGO_URL: mongodb://revisionna:${MONGO_PASSWORD}@mongo:27017/?authSource=admin
       MONGO_DB: revisionna
+      RUNNER_SOCKET: /run/sandbox/runner.sock
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-1}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      INVITE_CODE: ${INVITE_CODE:-}
+      INACTIVE_ACCOUNT_MONTHS: ${INACTIVE_ACCOUNT_MONTHS:-24}
+      ACTIVITY_RETENTION_DAYS: ${ACTIVITY_RETENTION_DAYS:-180}
       AI_PROVIDER: ${AI_PROVIDER:-}
       OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+    extra_hosts:
+      - host.docker.internal:host-gateway   # pour joindre un Ollama installé sur la machine hôte
     depends_on:
       db:
         condition: service_healthy
+      runner:
+        condition: service_healthy
       mongo:
         condition: service_started
-    # Les migrations / le chargement du contenu tournent avant de servir le trafic.
-    command: >
-      sh -c "flask --app wsgi:app init-db &&
-             flask --app wsgi:app seed &&
-             gunicorn --bind 0.0.0.0:5000 --workers 3 --timeout 60 --access-logfile - wsgi:app"
-    ports:
-      - "5000:5000"
+    networks:
+      - donnees
+      - facade
+    volumes:
+      - sandbox:/run/sandbox:ro
+    # Schéma, contenu et durées de conservation sont appliqués avant d'accepter le trafic.
+    command:
+      - sh
+      - -c
+      - >
+        flask --app wsgi:app init-db &&
+        flask --app wsgi:app seed &&
+        flask --app wsgi:app purge &&
+        exec gunicorn --config gunicorn.conf.py wsgi:app
+    # Aucun port publié : l'API n'est joignable qu'à travers nginx.
 
   web:
+    <<: *durci
     build: ./frontend
+    image: revisionna-web:local
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
     depends_on:
       api:
-        condition: service_started
+        condition: service_healthy
+    networks:
+      - facade
     ports:
-      - "8080:80"
+      - "${WEB_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+networks:
+  # nginx <-> API. C'est aussi par ici que l'API sort vers Internet (OpenAI).
+  facade: {}
+  # API <-> bases de données : réseau interne, sans aucun accès extérieur.
+  donnees:
+    internal: true
 
 volumes:
   pgdata:
   mongodata:
+  sandbox:
