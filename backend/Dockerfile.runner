@@ -1,0 +1,14 @@
+# Service de correction : exécute le code des élèves, et rien d'autre.
+# Bibliothèque standard uniquement, aucun secret, aucune dépendance installée.
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /opt/revisionna
+COPY sandbox/ ./sandbox/
+
+# Le serveur reste root dans son conteneur (sans réseau, système de fichiers en
+# lecture seule, capacités réduites : voir compose.yaml) pour pouvoir lancer
+# chaque travail sous un compte Unix jetable différent.
+CMD ["python", "-m", "sandbox.server"]

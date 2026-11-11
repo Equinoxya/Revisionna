@@ -24,8 +24,12 @@ class Config:
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
     OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
-    # Securite du bac a sable d'execution de code
+    # Correction des TP : service isole (production) ou sous-processus local (dev)
     RUNNER_TIMEOUT = int(os.getenv("RUNNER_TIMEOUT", "8"))
+    RUNNER_SOCKET = os.getenv("RUNNER_SOCKET", "")
+    ALLOW_LOCAL_RUNNER = os.getenv(
+        "ALLOW_LOCAL_RUNNER", "0" if os.getenv("FLASK_ENV", "production") == "production" else "1"
+    ).lower() in ("1", "true", "yes", "on")
 
 
 class TestConfig(Config):
@@ -34,3 +38,5 @@ class TestConfig(Config):
     JWT_SECRET_KEY = "test-secret-key-for-unit-tests-only-32b"
     AI_PROVIDER = ""
     MONGO_URL = ""
+    RUNNER_SOCKET = ""
+    ALLOW_LOCAL_RUNNER = True

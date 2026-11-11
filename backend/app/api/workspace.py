@@ -1,5 +1,5 @@
 """Espace de travail de l'eleve : validation des lecons, soumission des TP, progression."""
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from ..extensions import db
@@ -82,14 +82,16 @@ def submit_exercise(exercise_id):
         code = body.get("code") or ""
         if not code.strip():
             return jsonify({"error": "Code vide."}), 400
-        result = runner.run_python(
-            code, spec.get("tests", []), timeout=current_app.config["RUNNER_TIMEOUT"]
-        )
+        if len(code) > runner.MAX_CODE_CHARS:
+            return jsonify({"error": "Code trop long."}), 413
+        result = runner.run_python(code, spec.get("tests", []))
         stored = code
     elif exercise.kind == "sql":
         code = body.get("code") or ""
         if not code.strip():
             return jsonify({"error": "Requete vide."}), 400
+        if len(code) > runner.MAX_CODE_CHARS:
+            return jsonify({"error": "Requete trop longue."}), 413
         result = runner.run_sql(code, spec)
         stored = code
     elif exercise.kind == "quiz":
@@ -116,6 +118,9 @@ def submit_exercise(exercise_id):
         "results": result.get("results", []),
         "submission_id": submission.id,
     }
+    for key in ("stdout", "columns", "rows", "expected_rows"):
+        if key in result:
+            payload[key] = result[key]
     if result["passed"] and exercise.solution:
         payload["solution"] = exercise.solution
     return jsonify(payload)
