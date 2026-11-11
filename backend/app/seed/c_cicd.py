@@ -1,9 +1,9 @@
 COURSE = {
     "slug": "ci-cd",
     "title": "CI/CD avec GitHub Actions",
-    "summary": "Pipeline, jobs, matrices, cache, secrets, portes de qualite et semantique du versionnage.",
+    "summary": "Pipeline, jobs, matrices, cache, secrets, portes de qualité, audit des dépendances et numérotation des versions.",
     "category": "DevOps",
-    "level": "intermediaire",
+    "level": "intermédiaire",
     "icon": "CI",
     "lessons": [
         {
@@ -11,68 +11,185 @@ COURSE = {
             "title": "Anatomie d'un pipeline",
             "duration_min": 20,
             "blocks": [
-                {"type": "text", "md": "**CI** (integration continue) : a chaque push, on verifie automatiquement que le code compile, que le style tient et que les tests passent. **CD** (deploiement continu) : si la CI est verte, on livre.\n\nVocabulaire GitHub Actions : un **workflow** contient des **jobs** (paralleles par defaut), chaque job des **steps** (sequentiels)."},
-                {"type": "code", "lang": "yaml", "code": "name: CI\n\non:\n  push:\n    branches: [main]\n  pull_request:\n\njobs:\n  backend:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-python@v5\n        with:\n          python-version: \"3.12\"\n          cache: pip\n      - run: pip install -r backend/requirements-dev.txt\n      - run: ruff check backend\n      - run: pytest backend --cov=backend/app\n\n  frontend:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: \"20\"\n          cache: npm\n          cache-dependency-path: frontend/package-lock.json\n      - run: npm ci\n        working-directory: frontend\n      - run: npm run build\n        working-directory: frontend"},
-                {"type": "text", "md": "Les deux jobs tournent **en parallele** : le retour est plus rapide. Un job de deploiement, lui, declare `needs: [backend, frontend]` pour attendre les deux."},
-                {"type": "callout", "tone": "warn", "md": "Un **secret** (`${{ secrets.X }}`) n'est jamais affiche dans les logs et n'est pas disponible dans les workflows declenches par un fork. Ne mettez jamais de cle dans le YAML."},
-                {"type": "quiz", "id": "q1", "question": "Comment forcer un job a attendre un autre ?", "choices": ["depends_on", "needs", "after", "requires"], "answer": "needs", "explanation": "`needs: [autre_job]` cree la dependance."},
-                {"type": "quiz", "id": "q2", "question": "Que fait `npm ci` plutot que `npm install` ?", "choices": ["Rien de different", "Installe exactement le package-lock.json, de facon reproductible", "Installe globalement", "Met a jour les dependances"], "answer": "Installe exactement le package-lock.json, de facon reproductible", "explanation": "En CI, on veut la reproductibilite, pas la mise a jour."},
+                {"type": "text", "md": '''**Intégration continue** (CI) : à chaque envoi de code, on vérifie automatiquement qu'il se construit, que le style est respecté et que les tests passent. **Déploiement continu** (CD) : si tout est vert, on livre.
+
+Le vocabulaire de GitHub Actions : un *workflow* contient des *jobs* (lancés en parallèle par défaut), et chaque job une suite d'étapes (*steps*) exécutées l'une après l'autre.'''},
+                {"type": "code", "lang": "yaml", "code": '''name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r backend/requirements-dev.txt
+      - run: ruff check backend
+      - run: pytest backend
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend'''},
+                {"type": "text", "md": "Les deux jobs tournent **en parallèle** : la réponse arrive plus vite. Un job de déploiement, lui, déclare `needs: [backend, frontend]` pour attendre les deux."},
+                {"type": "callout", "tone": "warn", "md": "Un **secret** (`${{ secrets.X }}`) n'apparaît jamais dans les journaux, et n'est pas transmis aux workflows déclenchés depuis un fork. N'écrivez jamais une clé dans le fichier YAML."},
+                {"type": "callout", "tone": "info", "md": "La CI ne vérifie que ce qui est **dans le dépôt**. Un fichier présent sur votre machine mais ignoré par `.gitignore` fait passer vos tests en local… et casser la construction pour tous les autres. D'où l'intérêt de tester à partir d'un clone neuf."},
+                {"type": "quiz", "id": "q1", "question": "Comment obliger un job à en attendre un autre ?", "choices": ["depends_on", "needs", "after", "requires"], "answer": "needs", "explanation": "`needs: [autre_job]` crée la dépendance."},
+                {"type": "quiz", "id": "q2", "question": "Que fait `npm ci`, à la différence de `npm install` ?", "choices": ["Rien de différent", "Il installe exactement ce que décrit package-lock.json", "Il installe pour tout le système", "Il met les dépendances à jour"], "answer": "Il installe exactement ce que décrit package-lock.json", "explanation": "En CI, on veut la même installation à chaque fois, pas des mises à jour surprises."},
             ],
         },
         {
             "slug": "qualite-et-versions",
-            "title": "Portes de qualite et versionnage",
+            "title": "Portes de qualité, audit et versions",
             "duration_min": 15,
             "blocks": [
-                {"type": "text", "md": "Une **porte de qualite** (quality gate) bloque la fusion si un critere n'est pas rempli : tests verts, couverture minimale, lint propre, revue approuvee. Sur GitHub : *branch protection rules*.\n\nL'ordre des etapes compte : les verifications rapides d'abord (lint, tests unitaires), les lentes ensuite (integration, e2e). On echoue vite."},
-                {"type": "code", "lang": "yaml", "code": "    strategy:\n      matrix:\n        python-version: [\"3.11\", \"3.12\", \"3.13\"]\n      fail-fast: false\n    steps:\n      - uses: actions/setup-python@v5\n        with:\n          python-version: ${{ matrix.python-version }}"},
-                {"type": "text", "md": "**SemVer** : `MAJEUR.MINEUR.CORRECTIF`.\n\n- correctif : correction compatible (1.2.3 -> 1.2.4)\n- mineur : fonctionnalite compatible (1.2.3 -> 1.3.0)\n- majeur : rupture de compatibilite (1.2.3 -> 2.0.0)"},
-                {"type": "quiz", "id": "q1", "question": "Vous supprimez un champ de reponse d'API. Quelle version ?", "choices": ["1.2.4", "1.3.0", "2.0.0", "1.2.3-beta"], "answer": "2.0.0", "explanation": "C'est une rupture pour les clients : incrementation majeure."},
+                {"type": "text", "md": '''Une **porte de qualité** bloque la fusion tant qu'un critère n'est pas rempli : tests verts, couverture minimale, style propre, relecture approuvée. Sur GitHub, cela se règle dans les règles de protection de branche.
+
+L'ordre des étapes compte : les vérifications rapides d'abord (style, tests unitaires), les lentes ensuite (intégration, bout en bout). On échoue le plus tôt possible.'''},
+                {"type": "code", "lang": "yaml", "code": '''    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+      fail-fast: false
+    steps:
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}'''},
+                {"type": "text", "md": '''Vos dépendances vieillissent sans que votre code change : des failles y sont découvertes chaque semaine. Un **audit automatique** les signale :
+
+```bash
+pip-audit -r backend/requirements.txt
+npm audit --audit-level=high
+```
+
+Cette application le lance à chaque envoi de code et une fois par semaine.'''},
+                {"type": "text", "md": '''**Numérotation sémantique** (SemVer) : `MAJEUR.MINEUR.CORRECTIF`.
+
+- correctif : une correction compatible (1.2.3 → 1.2.4) ;
+- mineur : une fonctionnalité compatible (1.2.3 → 1.3.0) ;
+- majeur : une rupture de compatibilité (1.2.3 → 2.0.0).'''},
+                {"type": "quiz", "id": "q1", "question": "Vous supprimez un champ dans la réponse d'une API. Quelle version publier après la 1.2.3 ?", "choices": ["1.2.4", "1.3.0", "2.0.0", "1.2.3-beta"], "answer": "2.0.0", "explanation": "C'est une rupture pour ceux qui utilisent l'API : le numéro majeur augmente."},
             ],
         },
     ],
     "exercises": [
         {
             "slug": "tp-semver",
-            "title": "TP - Calculer la prochaine version",
+            "title": "Calculer la prochaine version",
             "kind": "python",
             "difficulty": "facile",
-            "statement": "Implementez `prochaine_version(version, type_changement)` :\n\n- `version` est une chaine `\"MAJEUR.MINEUR.CORRECTIF\"`.\n- `type_changement` vaut `\"correctif\"`, `\"mineur\"` ou `\"majeur\"`.\n- Une incrementation mineure remet le correctif a 0 ; une majeure remet mineur et correctif a 0.\n- Un type inconnu leve `ValueError`.\n- Une version mal formee (nombre de segments different de 3, ou segment non numerique) leve `ValueError`.",
-            "starter_code": "def prochaine_version(version, type_changement):\n    ...\n",
-            "solution": "def prochaine_version(version, type_changement):\n    segments = version.split(\".\")\n    if len(segments) != 3 or not all(s.isdigit() for s in segments):\n        raise ValueError(f\"version invalide : {version}\")\n    majeur, mineur, correctif = (int(s) for s in segments)\n\n    if type_changement == \"correctif\":\n        correctif += 1\n    elif type_changement == \"mineur\":\n        mineur, correctif = mineur + 1, 0\n    elif type_changement == \"majeur\":\n        majeur, mineur, correctif = majeur + 1, 0, 0\n    else:\n        raise ValueError(f\"type inconnu : {type_changement}\")\n\n    return f\"{majeur}.{mineur}.{correctif}\"\n",
+            "statement": '''Écrivez `prochaine_version(version, type_changement)` :
+
+- `version` est une chaîne `"MAJEUR.MINEUR.CORRECTIF"` ;
+- `type_changement` vaut `"correctif"`, `"mineur"` ou `"majeur"` ;
+- une version mineure remet le correctif à 0 ; une version majeure remet le mineur et le correctif à 0 ;
+- un type inconnu lève `ValueError` ;
+- une version mal formée (pas exactement 3 segments, ou un segment qui n'est pas un nombre) lève `ValueError`.''',
+            "starter_code": '''def prochaine_version(version, type_changement):
+    ...
+''',
+            "solution": '''def prochaine_version(version, type_changement):
+    segments = version.split(".")
+    if len(segments) != 3 or not all(s.isdigit() for s in segments):
+        raise ValueError(f"version invalide : {version}")
+    majeur, mineur, correctif = (int(s) for s in segments)
+
+    if type_changement == "correctif":
+        correctif += 1
+    elif type_changement == "mineur":
+        mineur, correctif = mineur + 1, 0
+    elif type_changement == "majeur":
+        majeur, mineur, correctif = majeur + 1, 0, 0
+    else:
+        raise ValueError(f"type inconnu : {type_changement}")
+
+    return f"{majeur}.{mineur}.{correctif}"
+''',
             "hints": [
-                "`version.split('.')` puis verifiez la longueur et `isdigit()`.",
-                "Validez avant de calculer : une version invalide ne doit rien incrementer.",
-                "Pensez a remettre les segments de droite a zero.",
+                "`version.split('.')`, puis vérifiez la longueur et `isdigit()`.",
+                "Validez avant de calculer : une version invalide ne doit rien incrémenter.",
+                "N'oubliez pas de remettre à zéro les segments de droite.",
             ],
             "spec": {"tests": [
                 {"name": "correctif", "code": "assert prochaine_version('1.2.3', 'correctif') == '1.2.4'"},
                 {"name": "mineur", "code": "assert prochaine_version('1.2.3', 'mineur') == '1.3.0'"},
                 {"name": "majeur", "code": "assert prochaine_version('1.2.3', 'majeur') == '2.0.0'"},
                 {"name": "type_inconnu", "code": "try:\n    prochaine_version('1.2.3', 'patchouli')\nexcept ValueError:\n    pass\nelse:\n    raise AssertionError('ValueError attendue')"},
-                {"name": "version_invalide", "code": "try:\n    prochaine_version('1.2', 'mineur')\nexcept ValueError:\n    pass\nelse:\n    raise AssertionError('ValueError attendue')"},
+                {"name": "version_incomplete", "code": "try:\n    prochaine_version('1.2', 'mineur')\nexcept ValueError:\n    pass\nelse:\n    raise AssertionError('ValueError attendue')"},
                 {"name": "segment_non_numerique", "code": "try:\n    prochaine_version('1.x.3', 'mineur')\nexcept ValueError:\n    pass\nelse:\n    raise AssertionError('ValueError attendue')"},
             ]},
         },
         {
             "slug": "tp-porte-qualite",
-            "title": "TP - Porte de qualite",
+            "title": "Une porte de qualité",
             "kind": "python",
             "difficulty": "moyen",
-            "statement": "Un pipeline doit decider s'il peut deployer.\n\n`evaluer(rapport, seuil_couverture=80)` recoit un dictionnaire, par exemple :\n\n```python\n{\"tests\": {\"passes\": 42, \"echoues\": 0}, \"couverture\": 86.2, \"lint\": 0, \"revues\": 1}\n```\n\nRenvoyez `{\"deployable\": bool, \"raisons\": [...]}` ou `raisons` liste les blocages, dans cet ordre :\n\n1. `\"tests en echec\"` si `echoues > 0`\n2. `\"aucun test\"` si `passes == 0` et `echoues == 0`\n3. `\"couverture insuffisante\"` si `couverture < seuil_couverture`\n4. `\"erreurs de lint\"` si `lint > 0`\n5. `\"revue manquante\"` si `revues < 1`\n\n`deployable` est vrai seulement si `raisons` est vide. Les cles absentes valent 0.",
-            "starter_code": "def evaluer(rapport, seuil_couverture=80):\n    ...\n",
-            "solution": "def evaluer(rapport, seuil_couverture=80):\n    tests = rapport.get(\"tests\", {}) or {}\n    passes = tests.get(\"passes\", 0)\n    echoues = tests.get(\"echoues\", 0)\n    raisons = []\n\n    if echoues > 0:\n        raisons.append(\"tests en echec\")\n    if passes == 0 and echoues == 0:\n        raisons.append(\"aucun test\")\n    if rapport.get(\"couverture\", 0) < seuil_couverture:\n        raisons.append(\"couverture insuffisante\")\n    if rapport.get(\"lint\", 0) > 0:\n        raisons.append(\"erreurs de lint\")\n    if rapport.get(\"revues\", 0) < 1:\n        raisons.append(\"revue manquante\")\n\n    return {\"deployable\": not raisons, \"raisons\": raisons}\n",
+            "statement": '''Un pipeline doit décider s'il peut déployer.
+
+`evaluer(rapport, seuil_couverture=80)` reçoit un dictionnaire, par exemple :
+
+```python
+{"tests": {"passes": 42, "echoues": 0}, "couverture": 86.2, "lint": 0, "revues": 1}
+```
+
+Renvoyez `{"deployable": bool, "raisons": [...]}`, où `raisons` liste les blocages dans cet ordre :
+
+1. `"tests en échec"` si `echoues > 0`
+2. `"aucun test"` si `passes == 0` et `echoues == 0`
+3. `"couverture insuffisante"` si `couverture < seuil_couverture`
+4. `"erreurs de style"` si `lint > 0`
+5. `"relecture manquante"` si `revues < 1`
+
+`deployable` n'est vrai que si `raisons` est vide. Une clé absente vaut 0.''',
+            "starter_code": '''def evaluer(rapport, seuil_couverture=80):
+    ...
+''',
+            "solution": '''def evaluer(rapport, seuil_couverture=80):
+    tests = rapport.get("tests", {}) or {}
+    passes = tests.get("passes", 0)
+    echoues = tests.get("echoues", 0)
+    raisons = []
+
+    if echoues > 0:
+        raisons.append("tests en échec")
+    if passes == 0 and echoues == 0:
+        raisons.append("aucun test")
+    if rapport.get("couverture", 0) < seuil_couverture:
+        raisons.append("couverture insuffisante")
+    if rapport.get("lint", 0) > 0:
+        raisons.append("erreurs de style")
+    if rapport.get("revues", 0) < 1:
+        raisons.append("relecture manquante")
+
+    return {"deployable": not raisons, "raisons": raisons}
+''',
             "hints": [
-                "Utilisez `.get(cle, 0)` partout pour gerer les cles absentes.",
-                "Ajoutez les raisons dans l'ordre exact de l'enonce.",
-                "`not raisons` vaut True quand la liste est vide.",
+                "Utilisez partout `.get(cle, 0)` pour gérer les clés absentes.",
+                "Ajoutez les raisons dans l'ordre exact de l'énoncé.",
+                "`not raisons` vaut `True` quand la liste est vide.",
             ],
             "spec": {"tests": [
                 {"name": "tout_vert", "code": "r = {'tests': {'passes': 10, 'echoues': 0}, 'couverture': 90, 'lint': 0, 'revues': 1}\nassert evaluer(r) == {'deployable': True, 'raisons': []}"},
-                {"name": "tests_echoues", "code": "r = {'tests': {'passes': 9, 'echoues': 1}, 'couverture': 90, 'lint': 0, 'revues': 1}\nres = evaluer(r)\nassert res['deployable'] is False and res['raisons'] == ['tests en echec']"},
+                {"name": "tests_echoues", "code": "r = {'tests': {'passes': 9, 'echoues': 1}, 'couverture': 90, 'lint': 0, 'revues': 1}\nres = evaluer(r)\nassert res['deployable'] is False and res['raisons'] == ['tests en échec']"},
                 {"name": "aucun_test", "code": "r = {'tests': {'passes': 0, 'echoues': 0}, 'couverture': 90, 'lint': 0, 'revues': 1}\nassert evaluer(r)['raisons'] == ['aucun test']"},
                 {"name": "couverture", "code": "r = {'tests': {'passes': 5, 'echoues': 0}, 'couverture': 42.0, 'lint': 0, 'revues': 1}\nassert evaluer(r)['raisons'] == ['couverture insuffisante']"},
-                {"name": "rapport_vide", "code": "res = evaluer({})\nassert res['deployable'] is False and res['raisons'] == ['aucun test', 'couverture insuffisante', 'revue manquante']"},
+                {"name": "style_et_relecture", "code": "r = {'tests': {'passes': 5, 'echoues': 0}, 'couverture': 90, 'lint': 3, 'revues': 0}\nassert evaluer(r)['raisons'] == ['erreurs de style', 'relecture manquante']"},
+                {"name": "rapport_vide", "code": "res = evaluer({})\nassert res['deployable'] is False and res['raisons'] == ['aucun test', 'couverture insuffisante', 'relecture manquante']"},
                 {"name": "seuil_personnalise", "code": "r = {'tests': {'passes': 5, 'echoues': 0}, 'couverture': 50, 'lint': 0, 'revues': 1}\nassert evaluer(r, seuil_couverture=50)['deployable'] is True"},
             ]},
         },

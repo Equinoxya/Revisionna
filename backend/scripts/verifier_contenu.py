@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Verifie que chaque solution de reference passe les tests de son exercice.
+"""Vérifie que chaque solution de référence passe les tests de son exercice.
 
-Utilise en CI : un enonce dont la solution echoue est un bug de contenu.
+Utilisé en CI : un énoncé dont la solution échoue est une erreur de contenu.
 Usage : python scripts/verifier_contenu.py
 """
 import pathlib
@@ -43,13 +43,13 @@ def main() -> int:
 
     print()
     if echecs:
-        print(f"{len(echecs)} exercice(s) en echec :")
+        print(f"{len(echecs)} exercice(s) en échec :")
         for reference, sortie in echecs:
             print(f"\n--- {reference} ---\n{sortie[:1000]}")
         return 1
 
     total = sum(len(c["exercises"]) for c in CATALOG)
-    print(f"{total} exercices verifies, tout est coherent.")
+    print(f"{total} exercices vérifiés, tout est cohérent.")
     return 0
 
 

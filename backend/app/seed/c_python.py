@@ -1,60 +1,142 @@
 COURSE = {
     "slug": "python",
     "title": "Python : les fondamentaux",
-    "summary": "Types, structures de donnees, fonctions, comprehensions, POO et gestion des erreurs.",
+    "summary": "Types, structures de données, fonctions, compréhensions, objets et gestion des erreurs.",
     "category": "Langage",
-    "level": "debutant",
+    "level": "débutant",
     "icon": "Py",
     "lessons": [
         {
             "slug": "types-et-structures",
-            "title": "Types et structures de donnees",
+            "title": "Types et structures de données",
             "duration_min": 15,
             "blocks": [
-                {"type": "text", "md": "Python est **dynamiquement type** : une variable est une etiquette posee sur un objet. L'objet porte le type, pas la variable.\n\nLes quatre structures a maitriser :\n\n| Structure | Mutable | Ordonne | Usage typique |\n|---|---|---|---|\n| `list` | oui | oui | sequence que l'on modifie |\n| `tuple` | non | oui | enregistrement fige, cle de dict |\n| `dict` | oui | oui (insertion) | association cle -> valeur |\n| `set` | oui | non | unicite, operations ensemblistes |"},
-                {"type": "code", "lang": "python", "code": "notes = {\"alice\": 14, \"bob\": 9}\nnotes[\"chloe\"] = 17          # ajout\nmoyenne = sum(notes.values()) / len(notes)\nprint(f\"moyenne = {moyenne:.2f}\")\n\nadmis = {nom for nom, note in notes.items() if note >= 10}\nprint(admis)                 # {'alice', 'chloe'}"},
-                {"type": "callout", "tone": "warn", "md": "Piege classique : ne jamais utiliser une liste comme valeur par defaut d'un parametre (`def f(x=[])`). Elle est creee **une seule fois**, a la definition de la fonction."},
-                {"type": "quiz", "id": "q1", "question": "Quel type choisir pour servir de cle de dictionnaire ?", "choices": ["list", "tuple", "set", "dict"], "answer": "tuple", "explanation": "Une cle doit etre hachable, donc immuable : le tuple l'est, la liste non."},
-                {"type": "quiz", "id": "q2", "question": "Que vaut `len({1, 2, 2, 3})` ?", "choices": ["2", "3", "4", "Erreur"], "answer": "3", "explanation": "Un set deduplique : {1, 2, 3}."},
+                {"type": "text", "md": '''Python est **dynamiquement typé** : une variable est une étiquette posée sur un objet. C'est l'objet qui porte le type, pas la variable.
+
+Les quatre structures à maîtriser :
+
+| Structure | Modifiable | Ordonnée | Usage typique |
+|---|---|---|---|
+| `list` | oui | oui | séquence que l'on fait évoluer |
+| `tuple` | non | oui | enregistrement figé, clé de dictionnaire |
+| `dict` | oui | oui (ordre d'insertion) | association clé → valeur |
+| `set` | oui | non | unicité, opérations ensemblistes |'''},
+                {"type": "code", "lang": "python", "code": '''notes = {"alice": 14, "bob": 9}
+notes["chloe"] = 17          # ajout
+moyenne = sum(notes.values()) / len(notes)
+print(f"moyenne = {moyenne:.2f}")
+
+admis = {nom for nom, note in notes.items() if note >= 10}
+print(admis)                 # {'alice', 'chloe'}'''},
+                {"type": "callout", "tone": "warn", "md": "Piège classique : ne jamais donner une liste comme valeur par défaut d'un paramètre (`def f(x=[])`). Elle est créée **une seule fois**, à la définition de la fonction, puis partagée par tous les appels."},
+                {"type": "quiz", "id": "q1", "question": "Quel type choisir pour servir de clé de dictionnaire ?", "choices": ["list", "tuple", "set", "dict"], "answer": "tuple", "explanation": "Une clé doit être hachable, donc immuable : le tuple l'est, la liste non."},
+                {"type": "quiz", "id": "q2", "question": "Que vaut `len({1, 2, 2, 3})` ?", "choices": ["2", "3", "4", "Une erreur"], "answer": "3", "explanation": "Un ensemble élimine les doublons : il reste {1, 2, 3}."},
             ],
         },
         {
             "slug": "fonctions-et-comprehensions",
-            "title": "Fonctions, comprehensions, generateurs",
+            "title": "Fonctions, compréhensions, générateurs",
             "duration_min": 15,
             "blocks": [
-                {"type": "text", "md": "Une **comprehension** remplace une boucle `for` + `append`. Elle est plus courte et plus rapide.\n\nUn **generateur** (parentheses au lieu de crochets) produit les valeurs a la demande : memoire constante, meme sur un flux infini."},
-                {"type": "code", "lang": "python", "code": "carres = [n * n for n in range(10) if n % 2 == 0]\nprint(carres)                      # [0, 4, 16, 36, 64]\n\n# generateur : rien n'est calcule avant l'iteration\nflux = (n * n for n in range(10_000_000))\nprint(next(flux), next(flux))      # 0 1\n\ndef compteur(debut=0):\n    \"\"\"Generateur infini avec yield.\"\"\"\n    while True:\n        yield debut\n        debut += 1"},
-                {"type": "text", "md": "Les arguments : `*args` capture les positionnels, `**kwargs` les nommes. Preferez des parametres explicites quand vous les connaissez."},
-                {"type": "quiz", "id": "q1", "question": "Quelle difference entre `[x for x in it]` et `(x for x in it)` ?", "choices": ["Aucune", "La 2e est un generateur paresseux", "La 2e est un tuple", "La 2e est plus lente"], "answer": "La 2e est un generateur paresseux", "explanation": "Les parentheses creent un generateur : evaluation a la demande."},
+                {"type": "text", "md": '''Une **compréhension** remplace une boucle `for` suivie d'un `append`. Elle est plus courte et plus rapide.
+
+Un **générateur** (des parenthèses au lieu des crochets) produit les valeurs à la demande : la mémoire utilisée reste constante, même sur un flux infini.'''},
+                {"type": "code", "lang": "python", "code": '''carres = [n * n for n in range(10) if n % 2 == 0]
+print(carres)                      # [0, 4, 16, 36, 64]
+
+# générateur : rien n'est calculé avant l'itération
+flux = (n * n for n in range(10_000_000))
+print(next(flux), next(flux))      # 0 1
+
+def compteur(debut=0):
+    """Générateur infini avec yield."""
+    while True:
+        yield debut
+        debut += 1'''},
+                {"type": "text", "md": "Côté arguments : `*args` capture les arguments positionnels, `**kwargs` les arguments nommés. Quand vous connaissez les paramètres, nommez-les explicitement."},
+                {"type": "quiz", "id": "q1", "question": "Quelle différence entre `[x for x in it]` et `(x for x in it)` ?", "choices": ["Aucune", "La seconde est un générateur paresseux", "La seconde est un tuple", "La seconde est plus lente"], "answer": "La seconde est un générateur paresseux", "explanation": "Les parenthèses créent un générateur : chaque valeur est calculée au moment où on la demande."},
             ],
         },
         {
             "slug": "poo-et-exceptions",
-            "title": "POO et gestion des erreurs",
+            "title": "Objets et gestion des erreurs",
             "duration_min": 20,
             "blocks": [
-                {"type": "text", "md": "Une classe regroupe etat (attributs) et comportement (methodes). `__init__` initialise l'instance, `__repr__` sert au debogage, les `@property` exposent un calcul comme un attribut."},
-                {"type": "code", "lang": "python", "code": "class Etudiant:\n    def __init__(self, nom, notes=None):\n        self.nom = nom\n        self.notes = list(notes or [])\n\n    @property\n    def moyenne(self):\n        if not self.notes:\n            return 0.0\n        return sum(self.notes) / len(self.notes)\n\n    def __repr__(self):\n        return f\"Etudiant({self.nom!r}, moyenne={self.moyenne:.1f})\"\n\nprint(Etudiant(\"Alice\", [12, 16]))"},
-                {"type": "text", "md": "Cote erreurs : attrapez **l'exception precise**, jamais `except:` nu. Levez vos propres exceptions metier en heritant de `Exception`."},
-                {"type": "code", "lang": "python", "code": "class NoteInvalide(ValueError):\n    pass\n\ndef ajouter(etudiant, note):\n    if not 0 <= note <= 20:\n        raise NoteInvalide(f\"note hors bornes : {note}\")\n    etudiant.notes.append(note)"},
-                {"type": "quiz", "id": "q1", "question": "Pourquoi eviter `except Exception: pass` ?", "choices": ["C'est plus lent", "Cela masque les bugs reels", "Python l'interdit", "Cela consomme de la memoire"], "answer": "Cela masque les bugs reels", "explanation": "Vous avalez aussi les erreurs que vous n'aviez pas prevues : le bug devient invisible."},
+                {"type": "text", "md": "Une classe regroupe un état (les attributs) et un comportement (les méthodes). `__init__` initialise l'instance, `__repr__` sert au débogage, et une `@property` expose un calcul comme s'il s'agissait d'un attribut."},
+                {"type": "code", "lang": "python", "code": '''class Etudiant:
+    def __init__(self, nom, notes=None):
+        self.nom = nom
+        self.notes = list(notes or [])
+
+    @property
+    def moyenne(self):
+        if not self.notes:
+            return 0.0
+        return sum(self.notes) / len(self.notes)
+
+    def __repr__(self):
+        return f"Etudiant({self.nom!r}, moyenne={self.moyenne:.1f})"
+
+print(Etudiant("Alice", [12, 16]))'''},
+                {"type": "text", "md": "Côté erreurs : attrapez **l'exception précise**, jamais un `except:` nu. Pour vos erreurs métier, créez vos propres exceptions en héritant de `Exception`."},
+                {"type": "code", "lang": "python", "code": '''class NoteInvalide(ValueError):
+    pass
+
+def ajouter(etudiant, note):
+    if not 0 <= note <= 20:
+        raise NoteInvalide(f"note hors bornes : {note}")
+    etudiant.notes.append(note)'''},
+                {"type": "quiz", "id": "q1", "question": "Pourquoi éviter `except Exception: pass` ?", "choices": ["C'est plus lent", "Cela masque les vrais bugs", "Python l'interdit", "Cela consomme de la mémoire"], "answer": "Cela masque les vrais bugs", "explanation": "Vous avalez aussi les erreurs que vous n'aviez pas prévues : le bug devient invisible."},
             ],
         },
     ],
     "exercises": [
         {
             "slug": "tp-statistiques",
-            "title": "TP - Statistiques sur une liste de notes",
+            "title": "Statistiques sur une liste de notes",
             "kind": "python",
             "difficulty": "facile",
-            "statement": "Ecrivez trois fonctions :\n\n1. `moyenne(notes)` -> la moyenne, `0.0` si la liste est vide.\n2. `admis(notes, seuil=10)` -> la liste des notes `>= seuil`.\n3. `repartition(notes)` -> un dictionnaire `{\"faible\": n, \"moyen\": n, \"bon\": n}` ou `faible < 8 <= moyen < 14 <= bon`.\n\nAucun import n'est necessaire.",
-            "starter_code": "def moyenne(notes):\n    ...\n\n\ndef admis(notes, seuil=10):\n    ...\n\n\ndef repartition(notes):\n    ...\n",
-            "solution": "def moyenne(notes):\n    return sum(notes) / len(notes) if notes else 0.0\n\n\ndef admis(notes, seuil=10):\n    return [n for n in notes if n >= seuil]\n\n\ndef repartition(notes):\n    buckets = {\"faible\": 0, \"moyen\": 0, \"bon\": 0}\n    for note in notes:\n        if note < 8:\n            buckets[\"faible\"] += 1\n        elif note < 14:\n            buckets[\"moyen\"] += 1\n        else:\n            buckets[\"bon\"] += 1\n    return buckets\n",
+            "statement": '''Écrivez trois fonctions :
+
+1. `moyenne(notes)` renvoie la moyenne, et `0.0` si la liste est vide.
+2. `admis(notes, seuil=10)` renvoie la liste des notes supérieures ou égales au seuil.
+3. `repartition(notes)` renvoie un dictionnaire `{"faible": n, "moyen": n, "bon": n}`, avec `faible < 8 <= moyen < 14 <= bon`.
+
+Aucun import n'est nécessaire.''',
+            "starter_code": '''def moyenne(notes):
+    ...
+
+
+def admis(notes, seuil=10):
+    ...
+
+
+def repartition(notes):
+    ...
+''',
+            "solution": '''def moyenne(notes):
+    return sum(notes) / len(notes) if notes else 0.0
+
+
+def admis(notes, seuil=10):
+    return [n for n in notes if n >= seuil]
+
+
+def repartition(notes):
+    buckets = {"faible": 0, "moyen": 0, "bon": 0}
+    for note in notes:
+        if note < 8:
+            buckets["faible"] += 1
+        elif note < 14:
+            buckets["moyen"] += 1
+        else:
+            buckets["bon"] += 1
+    return buckets
+''',
             "hints": [
                 "Pour la liste vide, testez `if not notes` avant la division.",
-                "`admis` tient en une comprehension de liste.",
-                "Pour `repartition`, initialisez les trois cles a 0 puis incrementez.",
+                "`admis` tient en une compréhension de liste.",
+                "Pour `repartition`, initialisez les trois clés à 0, puis incrémentez.",
             ],
             "spec": {"tests": [
                 {"name": "moyenne_simple", "code": "assert abs(moyenne([10, 20]) - 15) < 1e-9"},
@@ -67,23 +149,67 @@ COURSE = {
         },
         {
             "slug": "tp-classe-panier",
-            "title": "TP - Une classe Panier",
+            "title": "Une classe Panier",
             "kind": "python",
             "difficulty": "moyen",
-            "statement": "Implementez la classe `Panier` :\n\n- `ajouter(nom, prix, quantite=1)` cumule les quantites si l'article existe deja.\n- `retirer(nom)` supprime l'article ; leve `KeyError` s'il est absent.\n- la propriete `total` renvoie la somme `prix * quantite`.\n- `__len__` renvoie le nombre d'articles distincts.\n- un prix negatif leve `ValueError`.",
-            "starter_code": "class Panier:\n    def __init__(self):\n        self.articles = {}\n\n    def ajouter(self, nom, prix, quantite=1):\n        ...\n\n    def retirer(self, nom):\n        ...\n\n    @property\n    def total(self):\n        ...\n\n    def __len__(self):\n        ...\n",
-            "solution": "class Panier:\n    def __init__(self):\n        self.articles = {}\n\n    def ajouter(self, nom, prix, quantite=1):\n        if prix < 0:\n            raise ValueError(\"prix negatif\")\n        existant = self.articles.get(nom)\n        if existant:\n            existant[\"quantite\"] += quantite\n        else:\n            self.articles[nom] = {\"prix\": prix, \"quantite\": quantite}\n\n    def retirer(self, nom):\n        del self.articles[nom]\n\n    @property\n    def total(self):\n        return sum(a[\"prix\"] * a[\"quantite\"] for a in self.articles.values())\n\n    def __len__(self):\n        return len(self.articles)\n",
+            "statement": '''Implémentez la classe `Panier` :
+
+- `ajouter(nom, prix, quantite=1)` cumule les quantités si l'article existe déjà ;
+- `retirer(nom)` supprime l'article, et lève `KeyError` s'il est absent ;
+- la propriété `total` renvoie la somme des `prix * quantite` ;
+- `__len__` renvoie le nombre d'articles distincts ;
+- un prix négatif lève `ValueError`.''',
+            "starter_code": '''class Panier:
+    def __init__(self):
+        self.articles = {}
+
+    def ajouter(self, nom, prix, quantite=1):
+        ...
+
+    def retirer(self, nom):
+        ...
+
+    @property
+    def total(self):
+        ...
+
+    def __len__(self):
+        ...
+''',
+            "solution": '''class Panier:
+    def __init__(self):
+        self.articles = {}
+
+    def ajouter(self, nom, prix, quantite=1):
+        if prix < 0:
+            raise ValueError("prix négatif")
+        existant = self.articles.get(nom)
+        if existant:
+            existant["quantite"] += quantite
+        else:
+            self.articles[nom] = {"prix": prix, "quantite": quantite}
+
+    def retirer(self, nom):
+        del self.articles[nom]
+
+    @property
+    def total(self):
+        return sum(a["prix"] * a["quantite"] for a in self.articles.values())
+
+    def __len__(self):
+        return len(self.articles)
+''',
             "hints": [
                 "Stockez un dictionnaire `{nom: {\"prix\": ..., \"quantite\": ...}}`.",
-                "`del self.articles[nom]` leve deja KeyError : laissez-le remonter.",
+                "`del self.articles[nom]` lève déjà `KeyError` : laissez-la remonter.",
                 "`total` est une somme sur `self.articles.values()`.",
             ],
             "spec": {"tests": [
-                {"name": "ajout_et_total", "code": "p = Panier()\np.ajouter('the', 3.5, 2)\nassert abs(p.total - 7.0) < 1e-9"},
-                {"name": "cumul_quantite", "code": "p = Panier()\np.ajouter('the', 3.0)\np.ajouter('the', 3.0, 2)\nassert len(p) == 1 and abs(p.total - 9.0) < 1e-9"},
-                {"name": "retirer", "code": "p = Panier()\np.ajouter('the', 3.0)\np.retirer('the')\nassert len(p) == 0"},
-                {"name": "retirer_absent", "code": "p = Panier()\ntry:\n    p.retirer('cafe')\nexcept KeyError:\n    pass\nelse:\n    raise AssertionError('KeyError attendue')"},
-                {"name": "prix_negatif", "code": "p = Panier()\ntry:\n    p.ajouter('the', -1)\nexcept ValueError:\n    pass\nelse:\n    raise AssertionError('ValueError attendue')"},
+                {"name": "ajout_et_total", "code": "p = Panier()\np.ajouter('thé', 3.5, 2)\nassert abs(p.total - 7.0) < 1e-9"},
+                {"name": "cumul_quantite", "code": "p = Panier()\np.ajouter('thé', 3.0)\np.ajouter('thé', 3.0, 2)\nassert len(p) == 1 and abs(p.total - 9.0) < 1e-9"},
+                {"name": "retirer", "code": "p = Panier()\np.ajouter('thé', 3.0)\np.retirer('thé')\nassert len(p) == 0"},
+                {"name": "retirer_absent", "code": "p = Panier()\ntry:\n    p.retirer('café')\nexcept KeyError:\n    pass\nelse:\n    raise AssertionError('KeyError attendue')"},
+                {"name": "prix_negatif", "code": "p = Panier()\ntry:\n    p.ajouter('thé', -1)\nexcept ValueError:\n    pass\nelse:\n    raise AssertionError('ValueError attendue')"},
             ]},
         },
     ],
