@@ -36,7 +36,7 @@ COURSE = {
     "summary": "SELECT, jointures, agregats, sous-requetes, index et transactions.",
     "category": "Donnees",
     "level": "debutant",
-    "icon": "🗄️",
+    "icon": "SQL",
     "lessons": [
         {
             "slug": "select-et-jointures",

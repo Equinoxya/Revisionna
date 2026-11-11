@@ -4,7 +4,7 @@ COURSE = {
     "summary": "Pipeline, jobs, matrices, cache, secrets, portes de qualite et semantique du versionnage.",
     "category": "DevOps",
     "level": "intermediaire",
-    "icon": "⚙️",
+    "icon": "CI",
     "lessons": [
         {
             "slug": "pipeline-github-actions",

@@ -4,7 +4,7 @@ COURSE = {
     "summary": "JSX, etat, effets, hooks personnalises, listes et formulaires controles.",
     "category": "Frontend",
     "level": "intermediaire",
-    "icon": "⚛️",
+    "icon": "Re",
     "lessons": [
         {
             "slug": "composants-et-etat",

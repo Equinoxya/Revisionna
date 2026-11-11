@@ -1,11 +1,28 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-/** Rendu markdown commun aux lecons et aux enonces de TP. */
+// Le HTML brut n'est pas interprété (comportement par défaut de react-markdown) :
+// un contenu de cours ne peut pas injecter de script.
+const COMPOSANTS = {
+  table: ({ children }) => (
+    <div className="defilable">
+      <table>{children}</table>
+    </div>
+  ),
+  pre: ({ children }) => (
+    <div className="listing">
+      <pre>{children}</pre>
+    </div>
+  ),
+};
+
+/** Rendu markdown commun aux leçons et aux énoncés de TP. */
 export default function Markdown({ children }) {
   return (
-    <div className="markdown">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{children || ""}</ReactMarkdown>
+    <div className="prose">
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={COMPOSANTS}>
+        {children || ""}
+      </ReactMarkdown>
     </div>
   );
 }

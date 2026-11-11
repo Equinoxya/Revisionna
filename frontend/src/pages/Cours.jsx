@@ -1,75 +1,72 @@
-import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
-import { api } from "../lib/api.js";
+import Difficulte from "../components/Difficulte.jsx";
+import Icon from "../components/Icon.jsx";
+import Monogramme from "../components/Monogramme.jsx";
+import { deuxChiffres } from "../lib/format.js";
+import { useApi } from "../lib/useApi.js";
+
+const GENRES = { python: "Python", sql: "SQL", quiz: "QCM" };
 
 export default function Cours() {
   const { coursSlug } = useParams();
-  const [cours, setCours] = useState(null);
-  const [erreur, setErreur] = useState(null);
+  const { donnees, erreur } = useApi(`/courses/${coursSlug}`);
 
-  useEffect(() => {
-    let annule = false;
-    setCours(null);
-    api(`/courses/${coursSlug}`)
-      .then((data) => {
-        if (!annule) setCours(data.course);
-      })
-      .catch((exception) => {
-        if (!annule) setErreur(exception.message);
-      });
-    return () => {
-      annule = true;
-    };
-  }, [coursSlug]);
+  if (erreur) return <p className="message erreur">{erreur}</p>;
+  if (!donnees) return <p className="etat">Ouverture du chapitre…</p>;
 
-  if (erreur) return <p className="alerte">{erreur}</p>;
-  if (!cours) return <p className="etat">Chargement...</p>;
+  const cours = donnees.course;
 
   return (
-    <section>
-      <Link to="/cours" className="retour-lien">
-        &larr; Catalogue
+    <>
+      <Link to="/cours" className="fil">
+        <Icon nom="gauche" taille={16} /> Sommaire
       </Link>
 
-      <h1>
-        <span aria-hidden="true">{cours.icon}</span> {cours.title}
-      </h1>
-      <p className="sous-titre">{cours.summary}</p>
+      <div className="tete-cours">
+        <Monogramme cours={cours} grand />
+        <div>
+          <div className="sur-titre">
+            Chapitre {deuxChiffres(cours.position + 1)} · {cours.category} · niveau {cours.level}
+          </div>
+          <h1>{cours.title}</h1>
+        </div>
+      </div>
+      <p className="chapeau">{cours.summary}</p>
 
       <div className="deux-colonnes">
-        <div>
-          <h2>Lecons interactives</h2>
-          <ol className="liste-lecons">
+        <section>
+          <h2>Leçons</h2>
+          <ol className="liste-travail">
             {cours.lessons.map((lecon) => (
               <li key={lecon.slug}>
                 <Link to={`/cours/${cours.slug}/lecons/${lecon.slug}`}>
-                  <span className={lecon.done ? "pastille faite" : "pastille"} aria-hidden="true" />
-                  <span className="titre">{lecon.title}</span>
+                  <span className={lecon.done ? "pastille faite" : "pastille"}>
+                    {lecon.done && <Icon nom="coche" taille={15} titre="Leçon terminée" />}
+                  </span>
+                  <span className="titre-item">{lecon.title}</span>
                   <span className="duree">{lecon.duration_min} min</span>
                 </Link>
               </li>
             ))}
           </ol>
-        </div>
+        </section>
 
-        <div>
+        <section>
           <h2>Travaux pratiques</h2>
-          <ol className="liste-lecons">
+          <ol className="liste-travail">
             {cours.exercises.map((exercice) => (
               <li key={exercice.slug}>
                 <Link to={`/cours/${cours.slug}/exercices/${exercice.slug}`}>
-                  <span className="pastille type" aria-hidden="true">
-                    {exercice.kind === "sql" ? "SQL" : exercice.kind === "quiz" ? "QCM" : "PY"}
-                  </span>
-                  <span className="titre">{exercice.title}</span>
-                  <span className="duree">{exercice.difficulty}</span>
+                  <span className="etiquette">{GENRES[exercice.kind] ?? exercice.kind}</span>
+                  <span className="titre-item">{exercice.title}</span>
+                  <Difficulte valeur={exercice.difficulty} />
                 </Link>
               </li>
             ))}
           </ol>
-        </div>
+        </section>
       </div>
-    </section>
+    </>
   );
 }

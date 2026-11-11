@@ -4,7 +4,7 @@ COURSE = {
     "summary": "Serveur WSGI, reverse proxy, variables d'environnement, migrations, observabilite, strategies de release.",
     "category": "DevOps",
     "level": "avance",
-    "icon": "🚀",
+    "icon": "Dp",
     "lessons": [
         {
             "slug": "du-dev-a-la-prod",

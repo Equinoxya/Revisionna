@@ -4,7 +4,7 @@ COURSE = {
     "summary": "Modeles document, cle-valeur, choix entre SQL et NoSQL, agregations MongoDB.",
     "category": "Donnees",
     "level": "intermediaire",
-    "icon": "🍃",
+    "icon": "No",
     "lessons": [
         {
             "slug": "familles-nosql",

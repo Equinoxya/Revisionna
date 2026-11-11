@@ -4,7 +4,7 @@ COURSE = {
     "summary": "Appeler un LLM local ou distant, concevoir un prompt, gerer cout, latence et pannes, RAG minimal.",
     "category": "IA",
     "level": "intermediaire",
-    "icon": "🧠",
+    "icon": "IA",
     "lessons": [
         {
             "slug": "local-ou-api",

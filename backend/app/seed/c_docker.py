@@ -4,7 +4,7 @@ COURSE = {
     "summary": "Images, couches, build multi-stage, volumes, reseaux, orchestration locale.",
     "category": "DevOps",
     "level": "intermediaire",
-    "icon": "🐳",
+    "icon": "Dk",
     "lessons": [
         {
             "slug": "images-et-couches",

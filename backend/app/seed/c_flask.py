@@ -4,7 +4,7 @@ COURSE = {
     "summary": "Routes, blueprints, application factory, JSON, erreurs et tests avec le client de test.",
     "category": "Backend",
     "level": "intermediaire",
-    "icon": "🧪",
+    "icon": "Fl",
     "lessons": [
         {
             "slug": "routes-et-requetes",

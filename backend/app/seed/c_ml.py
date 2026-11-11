@@ -4,7 +4,7 @@ COURSE = {
     "summary": "Supervise vs non supervise, train/test, metriques, surapprentissage, pipeline scikit-learn.",
     "category": "Donnees",
     "level": "intermediaire",
-    "icon": "🤖",
+    "icon": "ML",
     "lessons": [
         {
             "slug": "vocabulaire-et-protocole",

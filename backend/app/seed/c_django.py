@@ -4,7 +4,7 @@ COURSE = {
     "summary": "MTV, ORM, migrations, admin, DRF et difference de philosophie avec Flask.",
     "category": "Backend",
     "level": "intermediaire",
-    "icon": "🎸",
+    "icon": "Dj",
     "lessons": [
         {
             "slug": "mtv-et-orm",

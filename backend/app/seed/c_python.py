@@ -4,7 +4,7 @@ COURSE = {
     "summary": "Types, structures de donnees, fonctions, comprehensions, POO et gestion des erreurs.",
     "category": "Langage",
     "level": "debutant",
-    "icon": "🐍",
+    "icon": "Py",
     "lessons": [
         {
             "slug": "types-et-structures",
