@@ -282,3 +282,17 @@ def test_production_accepte_des_secrets_solides():
         JWT_COOKIE_SECURE = True
 
     assert create_app(Production).config["JWT_COOKIE_SECURE"] is True
+
+
+def test_cookies_marques_secure_des_que_la_requete_arrive_en_https(client):
+    # COOKIE_SECURE est désactivé dans les tests : en HTTP le drapeau est absent…
+    en_clair = register(client, username="clair").headers.getlist("Set-Cookie")
+    assert not any("Secure" in cookie for cookie in en_clair)
+
+    # … mais en HTTPS il est ajouté d'office, session comme jeton CSRF.
+    https = client.application.test_client()
+    chiffre = https.post("/api/auth/login", base_url="https://localhost",
+                         json={"identifier": "clair", "password": PASSWORD})
+    cookies = chiffre.headers.getlist("Set-Cookie")
+    assert len(cookies) == 2 and all("; Secure" in cookie for cookie in cookies)
+    assert chiffre.headers["Strict-Transport-Security"]

@@ -127,7 +127,23 @@ def _register_guards(app: Flask) -> None:
         headers.setdefault("Cache-Control", "no-store")
         if request.is_secure:
             headers.setdefault("Strict-Transport-Security", "max-age=31536000")
+            _force_secure_cookies(response)
         return response
+
+
+def _force_secure_cookies(response) -> None:
+    """Sur une requête arrivée en HTTPS, tout cookie posé est marqué « Secure ».
+
+    Le réglage COOKIE_SECURE ne joue donc que pour un accès en HTTP simple
+    (essai local) : en HTTPS, le cookie de session ne peut jamais repartir en clair.
+    """
+    cookies = response.headers.getlist("Set-Cookie")
+    if not cookies:
+        return
+    del response.headers["Set-Cookie"]
+    for cookie in cookies:
+        flagged = any(part.strip().lower() == "secure" for part in cookie.split(";"))
+        response.headers.add("Set-Cookie", cookie if flagged else cookie + "; Secure")
 
 
 def _register_errors(app: Flask) -> None:
