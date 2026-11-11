@@ -2,7 +2,6 @@
 import logging
 
 from flask import Flask, jsonify
-from flask_cors import CORS
 
 from .config import Config
 from .extensions import db, jwt, migrate
@@ -15,7 +14,6 @@ def create_app(config_object=Config) -> Flask:
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
 
     logging.basicConfig(level=logging.INFO)
 
