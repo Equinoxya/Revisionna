@@ -615,7 +615,6 @@
   border-bottom: 1.5px solid var(--encre);
 }
 
-.atelier section + section h2,
 .atelier h2.suite {
   margin-top: 2.2rem;
 }

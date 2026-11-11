@@ -228,7 +228,10 @@
   margin: 1.3em 0;
   background: var(--papier-2);
   border-left: 3px solid var(--encre);
-  max-width: 100%;
+}
+
+.listing.prose {
+  max-width: calc(var(--mesure) + 5rem);
 }
 
 .listing pre {

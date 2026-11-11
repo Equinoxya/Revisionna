@@ -1,4 +1,5 @@
 import Icon from "./Icon.jsx";
+import Texte from "./Texte.jsx";
 
 /**
  * Question à choix unique, pour les leçons et les TP de type QCM.
@@ -13,7 +14,7 @@ export default function Quiz({ numero, question, choix, valeur, onChange, result
     <fieldset className="question" data-corrige={corrige ? "" : undefined}>
       <legend>
         {numero && <span className="numero">{numero}.</span>}
-        {question}
+        <Texte>{question}</Texte>
       </legend>
 
       {corrige && (
@@ -36,7 +37,9 @@ export default function Quiz({ numero, question, choix, valeur, onChange, result
               onChange={() => onChange(option)}
               disabled={corrige}
             />
-            <span>{option}</span>
+            <span>
+              <Texte>{option}</Texte>
+            </span>
             {bonne && (
               <span className="verdict marque-ok">
                 <Icon nom="coche" taille={18} titre="Bonne réponse" />
@@ -54,7 +57,7 @@ export default function Quiz({ numero, question, choix, valeur, onChange, result
       {corrige && (
         <p className="correction">
           <span className="cursive">{resultat.passed ? "Juste." : valeur ? "Faux." : "Sans réponse."}</span>
-          {explication}
+          <Texte>{explication}</Texte>
         </p>
       )}
     </fieldset>

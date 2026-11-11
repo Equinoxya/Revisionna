@@ -19,7 +19,12 @@ export default function Inscription() {
 
   if (user) return <Navigate to="/" replace />;
 
-  const modifier = (nom) => (evenement) => setChamps({ ...champs, [nom]: evenement.target.value });
+  const oublier = (nom) =>
+    setErreurs((actuelles) => Object.fromEntries(Object.entries(actuelles).filter(([cle]) => cle !== nom)));
+  const modifier = (nom) => (evenement) => {
+    setChamps({ ...champs, [nom]: evenement.target.value });
+    oublier(nom);
+  };
 
   const mdp = champs.password;
   const criteres = [
@@ -114,7 +119,10 @@ export default function Inscription() {
           <input
             type="checkbox"
             checked={accepte}
-            onChange={(e) => setAccepte(e.target.checked)}
+            onChange={(e) => {
+              setAccepte(e.target.checked);
+              oublier("accept_terms");
+            }}
             aria-invalid={erreurs.accept_terms ? "true" : undefined}
           />
           <span>

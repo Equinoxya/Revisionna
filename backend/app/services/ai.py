@@ -19,7 +19,6 @@ SYSTEM_PROMPT = (
 )
 
 TIMEOUT = 30
-_NOT_CONFIGURED = " (Aucun modèle n'est configuré sur ce serveur : réponse automatique.)"
 
 
 class AIUnavailable(RuntimeError):
@@ -92,16 +91,15 @@ def _offline(prompt: str) -> str:
         return (
             "Lisez la dernière ligne du message d'erreur : elle nomme le type d'erreur "
             "et la ligne en cause. Vérifiez les noms de variables et les types manipulés."
-            + _NOT_CONFIGURED
         )
     if "sql" in low or "select" in low:
         return (
             "Reprenez l'ordre SELECT / FROM / JOIN / WHERE / GROUP BY / HAVING / ORDER BY, "
-            "et vérifiez la clé de jointure." + _NOT_CONFIGURED
+            "et vérifiez la clé de jointure."
         )
     return (
         "Découpez le problème : quelles entrées, quelle sortie attendue, quelle étape bloque ? "
-        "Écrivez d'abord un cas simple à la main." + _NOT_CONFIGURED
+        "Écrivez d'abord un cas simple à la main."
     )
 
 

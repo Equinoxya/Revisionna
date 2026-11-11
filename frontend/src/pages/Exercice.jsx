@@ -33,6 +33,13 @@ export default function Exercice() {
   return <Copie key={chemin} exercice={donnees.exercise} cours={donnees.course} />;
 }
 
+/** 11.166666666666666 -> « 11.1667 » : quatre décimales suffisent pour comparer. */
+function cellule(valeur) {
+  if (valeur === null) return <span className="discret">NULL</span>;
+  if (typeof valeur === "number" && !Number.isInteger(valeur)) return String(Number(valeur.toFixed(4)));
+  return String(valeur);
+}
+
 function Tableau({ colonnes, lignes }) {
   if (!lignes?.length) return <p className="discret">Aucune ligne.</p>;
   return (
@@ -52,8 +59,8 @@ function Tableau({ colonnes, lignes }) {
         <tbody>
           {lignes.map((ligne, i) => (
             <tr key={i}>
-              {ligne.map((cellule, j) => (
-                <td key={j}>{cellule === null ? <span className="discret">NULL</span> : String(cellule)}</td>
+              {ligne.map((valeur, j) => (
+                <td key={j}>{cellule(valeur)}</td>
               ))}
             </tr>
           ))}
