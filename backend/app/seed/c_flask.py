@@ -1,0 +1,78 @@
+COURSE = {
+    "slug": "flask",
+    "title": "Flask : micro-framework web",
+    "summary": "Routes, blueprints, application factory, JSON, erreurs et tests avec le client de test.",
+    "category": "Backend",
+    "level": "intermediaire",
+    "icon": "🧪",
+    "lessons": [
+        {
+            "slug": "routes-et-requetes",
+            "title": "Routes, requetes, reponses",
+            "duration_min": 15,
+            "blocks": [
+                {"type": "text", "md": "Flask associe une **URL** a une **fonction de vue**. Le decorateur `@app.route` (ou `@app.get`, `@app.post`) fait l'enregistrement."},
+                {"type": "code", "lang": "python", "code": "from flask import Flask, jsonify, request\n\napp = Flask(__name__)\n\n@app.get(\"/api/cours/<slug>\")\ndef detail(slug):\n    return jsonify({\"slug\": slug})\n\n@app.post(\"/api/cours\")\ndef creer():\n    data = request.get_json(silent=True) or {}\n    if not data.get(\"titre\"):\n        return jsonify({\"error\": \"titre requis\"}), 400\n    return jsonify(data), 201"},
+                {"type": "callout", "tone": "info", "md": "`request.get_json(silent=True)` evite une erreur 400 brutale quand le corps n'est pas du JSON : vous controlez vous-meme le message d'erreur."},
+                {"type": "text", "md": "Les codes de retour comptent : `200` lecture, `201` creation, `400` donnees invalides, `401` non authentifie, `403` interdit, `404` introuvable, `409` conflit."},
+                {"type": "quiz", "id": "q1", "question": "Quel code HTTP pour une creation reussie ?", "choices": ["200", "201", "204", "302"], "answer": "201", "explanation": "201 Created, idealement avec l'URL de la ressource creee."},
+                {"type": "quiz", "id": "q2", "question": "A quoi sert `jsonify` plutot que `json.dumps` ?", "choices": ["C'est identique", "Il pose le bon Content-Type et serialise selon la config de l'app", "Il est plus rapide", "Il valide le schema"], "answer": "Il pose le bon Content-Type et serialise selon la config de l'app", "explanation": "jsonify renvoie une Response avec application/json."},
+            ],
+        },
+        {
+            "slug": "factory-et-blueprints",
+            "title": "Application factory et blueprints",
+            "duration_min": 20,
+            "blocks": [
+                {"type": "text", "md": "Une application reelle n'instancie pas `Flask` au niveau du module. On utilise une **factory** : une fonction qui construit l'app selon une configuration. On peut ainsi creer une app de test differente de celle de production."},
+                {"type": "code", "lang": "python", "code": "# app/__init__.py\ndef create_app(config_object=Config):\n    app = Flask(__name__)\n    app.config.from_object(config_object)\n    db.init_app(app)\n    from .api import auth\n    app.register_blueprint(auth.bp)\n    return app\n\n# app/api/auth.py\nbp = Blueprint(\"auth\", __name__, url_prefix=\"/api/auth\")\n\n@bp.post(\"/login\")\ndef login():\n    ..."},
+                {"type": "text", "md": "C'est exactement l'architecture de **cette** application : regardez `backend/app/__init__.py` et `backend/app/api/`."},
+                {"type": "code", "lang": "python", "code": "# tests/conftest.py - le client de test n'a pas besoin de serveur\nimport pytest\nfrom app import create_app\nfrom app.config import TestConfig\n\n@pytest.fixture\ndef client():\n    app = create_app(TestConfig)\n    with app.app_context():\n        db.create_all()\n        yield app.test_client()"},
+                {"type": "quiz", "id": "q1", "question": "Pourquoi une application factory ?", "choices": ["Pour aller plus vite", "Pour instancier plusieurs apps avec des configs differentes (test, prod)", "C'est obligatoire depuis Flask 3", "Pour eviter les blueprints"], "answer": "Pour instancier plusieurs apps avec des configs differentes (test, prod)", "explanation": "Elle supprime l'etat global et rend les tests isoles."},
+            ],
+        },
+    ],
+    "exercises": [
+        {
+            "slug": "tp-validation-payload",
+            "title": "TP - Validation d'un payload d'inscription",
+            "kind": "python",
+            "difficulty": "facile",
+            "statement": "Avant de toucher a la base, une vue doit valider ses entrees.\n\nEcrivez `valider_inscription(data)` qui renvoie un dictionnaire d'erreurs (vide si tout va bien) :\n\n- `email` : doit contenir un `@` et un `.` apres le `@` -> sinon `\"Email invalide.\"`\n- `username` : au moins 3 caracteres -> sinon `\"3 caracteres minimum.\"`\n- `password` : au moins 8 caracteres -> sinon `\"8 caracteres minimum.\"`\n\nUne cle absente doit produire la meme erreur qu'une valeur vide.",
+            "starter_code": "def valider_inscription(data):\n    erreurs = {}\n    ...\n    return erreurs\n",
+            "solution": "def valider_inscription(data):\n    erreurs = {}\n    email = (data.get(\"email\") or \"\").strip()\n    username = (data.get(\"username\") or \"\").strip()\n    password = data.get(\"password\") or \"\"\n\n    if \"@\" not in email or \".\" not in email.split(\"@\")[-1]:\n        erreurs[\"email\"] = \"Email invalide.\"\n    if len(username) < 3:\n        erreurs[\"username\"] = \"3 caracteres minimum.\"\n    if len(password) < 8:\n        erreurs[\"password\"] = \"8 caracteres minimum.\"\n    return erreurs\n",
+            "hints": [
+                "`data.get(\"email\") or \"\"` traite d'un coup la cle absente et la valeur None.",
+                "Pour le point apres l'arobase : `email.split(\"@\")[-1]`.",
+                "Renvoyez un dict vide quand tout est valide, pas None.",
+            ],
+            "spec": {"tests": [
+                {"name": "payload_valide", "code": "assert valider_inscription({'email': 'a@b.fr', 'username': 'alice', 'password': 'motdepasse'}) == {}"},
+                {"name": "email_invalide", "code": "e = valider_inscription({'email': 'abc', 'username': 'alice', 'password': 'motdepasse'})\nassert 'email' in e"},
+                {"name": "cles_absentes", "code": "e = valider_inscription({})\nassert set(e) == {'email', 'username', 'password'}"},
+                {"name": "password_court", "code": "e = valider_inscription({'email': 'a@b.fr', 'username': 'alice', 'password': 'court'})\nassert list(e) == ['password']"},
+            ]},
+        },
+        {
+            "slug": "tp-routeur",
+            "title": "TP - Un mini routeur a la Flask",
+            "kind": "python",
+            "difficulty": "moyen",
+            "statement": "Pour comprendre ce que fait Flask, implementez un mini routeur.\n\n`Routeur` expose :\n\n- `route(chemin)` : decorateur enregistrant une vue. Le chemin peut contenir un parametre entre chevrons, ex. `/cours/<slug>`.\n- `dispatch(chemin)` : appelle la vue correspondante en lui passant la valeur capturee, et renvoie `(resultat, 200)`.\n- si aucune route ne correspond : renvoie `(\"Not Found\", 404)`.\n\nUn seul parametre par chemin, pas de regex necessaire.",
+            "starter_code": "class Routeur:\n    def __init__(self):\n        self.routes = {}\n\n    def route(self, chemin):\n        def decorateur(fonction):\n            ...\n            return fonction\n        return decorateur\n\n    def dispatch(self, chemin):\n        ...\n",
+            "solution": "class Routeur:\n    def __init__(self):\n        self.routes = {}\n\n    def route(self, chemin):\n        def decorateur(fonction):\n            self.routes[chemin] = fonction\n            return fonction\n        return decorateur\n\n    def dispatch(self, chemin):\n        demande = [p for p in chemin.strip(\"/\").split(\"/\") if p != \"\"]\n        for motif, vue in self.routes.items():\n            parts = [p for p in motif.strip(\"/\").split(\"/\") if p != \"\"]\n            if len(parts) != len(demande):\n                continue\n            params = []\n            for attendu, recu in zip(parts, demande):\n                if attendu.startswith(\"<\") and attendu.endswith(\">\"):\n                    params.append(recu)\n                elif attendu != recu:\n                    break\n            else:\n                return vue(*params), 200\n        return \"Not Found\", 404\n",
+            "hints": [
+                "Stockez `{chemin: fonction}` dans `self.routes` depuis le decorateur.",
+                "Comparez les chemins segment par segment apres `strip('/').split('/')`.",
+                "Un segment `<...>` capture n'importe quoi : mettez la valeur de cote.",
+                "La clause `else` d'une boucle `for` s'execute si aucun `break` n'a eu lieu.",
+            ],
+            "spec": {"tests": [
+                {"name": "route_statique", "code": "r = Routeur()\n@r.route('/sante')\ndef sante():\n    return 'ok'\nassert r.dispatch('/sante') == ('ok', 200)"},
+                {"name": "route_parametree", "code": "r = Routeur()\n@r.route('/cours/<slug>')\ndef detail(slug):\n    return slug.upper()\nassert r.dispatch('/cours/flask') == ('FLASK', 200)"},
+                {"name": "introuvable", "code": "r = Routeur()\nassert r.dispatch('/inconnu') == ('Not Found', 404)"},
+                {"name": "longueur_differente", "code": "r = Routeur()\n@r.route('/cours/<slug>')\ndef detail(slug):\n    return slug\nassert r.dispatch('/cours') == ('Not Found', 404)"},
+            ]},
+        },
+    ],
+}

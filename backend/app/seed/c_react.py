@@ -1,0 +1,71 @@
+COURSE = {
+    "slug": "react",
+    "title": "React : interfaces a composants",
+    "summary": "JSX, etat, effets, hooks personnalises, listes et formulaires controles.",
+    "category": "Frontend",
+    "level": "intermediaire",
+    "icon": "⚛️",
+    "lessons": [
+        {
+            "slug": "composants-et-etat",
+            "title": "Composants, props et etat",
+            "duration_min": 15,
+            "blocks": [
+                {"type": "text", "md": "Un composant React est une fonction qui recoit des **props** et renvoie du JSX. Le rendu est une fonction de l'etat : on ne manipule pas le DOM a la main, on change l'etat et React recalcule."},
+                {"type": "code", "lang": "jsx", "code": "function Compteur({ pas = 1 }) {\n  const [valeur, setValeur] = useState(0);\n\n  return (\n    <button onClick={() => setValeur((v) => v + pas)}>\n      Clique : {valeur}\n    </button>\n  );\n}"},
+                {"type": "callout", "tone": "warn", "md": "Passez une **fonction** a `setValeur` quand la nouvelle valeur depend de l'ancienne. `setValeur(valeur + 1)` deux fois de suite n'incremente qu'une fois."},
+                {"type": "text", "md": "Regles des hooks : uniquement au niveau racine du composant, jamais dans une condition ou une boucle. L'ordre des appels doit etre stable entre deux rendus."},
+                {"type": "quiz", "id": "q1", "question": "Pourquoi une `key` sur les elements d'une liste ?", "choices": ["Pour le style", "Pour que React identifie chaque element entre deux rendus", "C'est optionnel et decoratif", "Pour trier la liste"], "answer": "Pour que React identifie chaque element entre deux rendus", "explanation": "Sans key stable, React recree les noeuds et perd l'etat local. Evitez l'index comme key sur une liste reordonnable."},
+                {"type": "quiz", "id": "q2", "question": "Ou peut-on appeler un hook ?", "choices": ["N'importe ou", "Au niveau racine d'un composant ou d'un hook personnalise", "Dans un if", "Dans une boucle"], "answer": "Au niveau racine d'un composant ou d'un hook personnalise", "explanation": "React s'appuie sur l'ordre d'appel des hooks."},
+            ],
+        },
+        {
+            "slug": "effets-et-hooks",
+            "title": "Effets et hooks personnalises",
+            "duration_min": 20,
+            "blocks": [
+                {"type": "text", "md": "`useEffect` synchronise le composant avec l'extérieur : appel reseau, abonnement, timer. Le tableau de dependances dit **quand** rejouer l'effet."},
+                {"type": "code", "lang": "jsx", "code": "function useCours(slug) {\n  const [cours, setCours] = useState(null);\n  const [erreur, setErreur] = useState(null);\n\n  useEffect(() => {\n    let annule = false;\n    fetch(`/api/courses/${slug}`)\n      .then((r) => r.json())\n      .then((d) => { if (!annule) setCours(d.course); })\n      .catch((e) => { if (!annule) setErreur(e.message); });\n    return () => { annule = true; };   // nettoyage\n  }, [slug]);\n\n  return { cours, erreur };\n}"},
+                {"type": "callout", "tone": "info", "md": "La fonction retournee par `useEffect` est le **nettoyage** : elle evite d'ecrire dans un composant demonte (fuite memoire et avertissements)."},
+                {"type": "text", "md": "Un **hook personnalise** est juste une fonction qui commence par `use` et appelle d'autres hooks. C'est le moyen de reutiliser de la logique entre composants. Voir `frontend/src/lib/api.js` et `AuthContext` dans cette application."},
+                {"type": "quiz", "id": "q1", "question": "Que fait un `useEffect` avec `[]` en dependances ?", "choices": ["Il ne s'execute jamais", "Il s'execute a chaque rendu", "Il s'execute une fois au montage", "Il boucle"], "answer": "Il s'execute une fois au montage", "explanation": "Tableau vide = aucune dependance = un seul passage (deux en mode strict dev)."},
+            ],
+        },
+    ],
+    "exercises": [
+        {
+            "slug": "tp-reducer",
+            "title": "TP - La logique d'un reducer (en Python)",
+            "kind": "python",
+            "difficulty": "moyen",
+            "statement": "Un reducer est une fonction pure `(etat, action) -> nouvel_etat`. C'est le coeur de `useReducer` et de Redux. On l'ecrit ici en Python pour tester la logique.\n\n`reducer(etat, action)` ou `etat = {\"items\": [...], \"filtre\": \"tous\"}` et `action = {\"type\": ..., ...}` :\n\n- `ajouter` (cle `texte`) : ajoute `{\"texte\": ..., \"fait\": False}` a la fin.\n- `basculer` (cle `index`) : inverse `fait` de l'element.\n- `filtrer` (cle `valeur`) : remplace `filtre`.\n- type inconnu : renvoie l'etat **inchange**.\n\nContrainte : ne modifiez jamais `etat` sur place, renvoyez un nouveau dictionnaire.",
+            "starter_code": "def reducer(etat, action):\n    ...\n",
+            "solution": "def reducer(etat, action):\n    type_action = action.get(\"type\")\n\n    if type_action == \"ajouter\":\n        items = etat[\"items\"] + [{\"texte\": action[\"texte\"], \"fait\": False}]\n        return {**etat, \"items\": items}\n\n    if type_action == \"basculer\":\n        index = action[\"index\"]\n        items = [\n            {**item, \"fait\": not item[\"fait\"]} if i == index else item\n            for i, item in enumerate(etat[\"items\"])\n        ]\n        return {**etat, \"items\": items}\n\n    if type_action == \"filtrer\":\n        return {**etat, \"filtre\": action[\"valeur\"]}\n\n    return etat\n",
+            "hints": [
+                "`{**etat, \"items\": nouveaux}` cree une copie avec un champ remplace.",
+                "Pour basculer, reconstruisez la liste avec enumerate plutot qu'un `items[i][...] = ...`.",
+                "Un type inconnu doit renvoyer l'objet etat lui-meme.",
+            ],
+            "spec": {"tests": [
+                {"name": "ajouter", "code": "e = reducer({'items': [], 'filtre': 'tous'}, {'type': 'ajouter', 'texte': 'revoir React'})\nassert e['items'] == [{'texte': 'revoir React', 'fait': False}]"},
+                {"name": "immutabilite", "code": "depart = {'items': [], 'filtre': 'tous'}\nreducer(depart, {'type': 'ajouter', 'texte': 'x'})\nassert depart['items'] == []"},
+                {"name": "basculer", "code": "e = reducer({'items': [{'texte': 'a', 'fait': False}], 'filtre': 'tous'}, {'type': 'basculer', 'index': 0})\nassert e['items'][0]['fait'] is True"},
+                {"name": "filtrer", "code": "e = reducer({'items': [], 'filtre': 'tous'}, {'type': 'filtrer', 'valeur': 'faits'})\nassert e['filtre'] == 'faits'"},
+                {"name": "type_inconnu", "code": "depart = {'items': [], 'filtre': 'tous'}\nassert reducer(depart, {'type': 'zzz'}) == depart"},
+            ]},
+        },
+        {
+            "slug": "quiz-react",
+            "title": "Quiz - Pieges React",
+            "kind": "quiz",
+            "difficulty": "facile",
+            "statement": "Les erreurs qu'on fait tous au debut.",
+            "spec": {"questions": [
+                {"id": "1", "question": "`useEffect(() => fetch(url), [])` relance-t-il l'appel quand `url` change ?", "choices": ["Oui", "Non, il faut mettre url dans les dependances", "Seulement en production", "Oui si url est un state"], "answer": "Non, il faut mettre url dans les dependances", "explanation": "Le tableau vide fige la valeur capturee au montage."},
+                {"id": "2", "question": "Peut-on faire `items.push(x)` sur un state ?", "choices": ["Oui", "Non : il faut setItems([...items, x])", "Oui avec useRef", "Oui si on appelle forceUpdate"], "answer": "Non : il faut setItems([...items, x])", "explanation": "React compare les references : muter ne declenche pas de rendu."},
+                {"id": "3", "question": "Que faire d'un state derive d'un autre state ?", "choices": ["Le dupliquer dans un useState", "Le calculer au rendu", "Le stocker en localStorage", "Le mettre dans un useEffect"], "answer": "Le calculer au rendu", "explanation": "Dupliquer un etat derive cree des desynchronisations."},
+                {"id": "4", "question": "Quel est le bon type de `key` pour une liste reordonnable ?", "choices": ["L'index du tableau", "Un identifiant stable de la donnee", "Math.random()", "Le texte affiche"], "answer": "Un identifiant stable de la donnee", "explanation": "L'index change au reordonnancement, Math.random() casse la reconciliation."},
+            ]},
+        },
+    ],
+}

@@ -1,0 +1,65 @@
+name: revisionna
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: revisionna
+      POSTGRES_PASSWORD: revisionna
+      POSTGRES_DB: revisionna
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U revisionna -d revisionna"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongodata:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: ./backend
+    environment:
+      FLASK_ENV: production
+      SECRET_KEY: ${SECRET_KEY:-change-me-en-production}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-aussi}
+      DATABASE_URL: postgresql+psycopg2://revisionna:revisionna@db:5432/revisionna
+      MONGO_URL: mongodb://mongo:27017
+      MONGO_DB: revisionna
+      AI_PROVIDER: ${AI_PROVIDER:-}
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+    depends_on:
+      db:
+        condition: service_healthy
+      mongo:
+        condition: service_started
+    # Les migrations / le chargement du contenu tournent avant de servir le trafic.
+    command: >
+      sh -c "flask --app wsgi:app init-db &&
+             flask --app wsgi:app seed &&
+             gunicorn --bind 0.0.0.0:5000 --workers 3 --timeout 60 --access-logfile - wsgi:app"
+    ports:
+      - "5000:5000"
+
+  web:
+    build: ./frontend
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "8080:80"
+
+volumes:
+  pgdata:
+  mongodata:
