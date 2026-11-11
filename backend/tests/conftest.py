@@ -1,4 +1,5 @@
 import pytest
+from helpers import csrf, register
 
 from app import create_app
 from app.config import TestConfig
@@ -24,10 +25,7 @@ def client(app):
 
 @pytest.fixture()
 def auth(client):
-    """Cree un compte et renvoie l'en-tete d'autorisation."""
-    resp = client.post("/api/auth/register", json={
-        "email": "eleve@test.fr", "username": "eleve", "password": "motdepasse",
-    })
-    assert resp.status_code == 201, resp.get_json()
-    token = resp.get_json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    """Ouvre une session (cookie dans le client) et renvoie l'en-tête CSRF."""
+    response = register(client)
+    assert response.status_code == 201, response.get_json()
+    return csrf(client)

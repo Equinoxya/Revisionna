@@ -68,3 +68,30 @@ def test_health(client):
     resp = client.get("/api/health")
     assert resp.status_code == 200
     assert resp.get_json()["database"] == "ok"
+
+
+def test_moyenne_du_bulletin(client, auth, app):
+    from app.models import Course, Exercise
+
+    # leçon : 1 bonne réponse sur 2 -> 0,5 ; TP : solution de référence -> 1,0
+    client.post("/api/courses/python/lessons/types-et-structures/complete",
+                json={"answers": {"q1": "tuple", "q2": "faux"}}, headers=auth)
+    with app.app_context():
+        exercise = (Exercise.query.join(Course)
+                    .filter(Course.slug == "python", Exercise.slug == "tp-statistiques").one())
+        ex_id, solution = exercise.id, exercise.solution
+    client.post(f"/api/exercises/{ex_id}/submit", json={"code": "x = 1"}, headers=auth)
+    client.post(f"/api/exercises/{ex_id}/submit", json={"code": solution}, headers=auth)
+
+    data = client.get("/api/me/dashboard").get_json()
+    python = next(c for c in data["courses"] if c["slug"] == "python")
+    assert python["average"] == 0.75           # (0,5 + 1,0) / 2 : la meilleure tentative compte
+    assert python["exercises_passed"] == 1
+    flask = next(c for c in data["courses"] if c["slug"] == "flask")
+    assert flask["average"] is None            # rien de noté : pas de moyenne
+    assert data["totals"]["average"] == 0.75
+
+
+def test_dates_serialisees_avec_fuseau(client, auth):
+    user = client.get("/api/auth/me").get_json()["user"]
+    assert user["created_at"].endswith("+00:00")

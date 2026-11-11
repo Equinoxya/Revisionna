@@ -138,3 +138,37 @@ def test_indice_sans_fournisseur_ia(client, auth, app):
 def test_exercice_inexistant(client, auth):
     assert client.post("/api/exercises/9999/submit", json={"code": "x = 1"},
                        headers=auth).status_code == 404
+
+
+def test_debit_des_soumissions_limite(client, auth, app, monkeypatch):
+    from app.api import workspace
+
+    monkeypatch.setattr(workspace, "SUBMISSIONS_PER_MINUTE", 2)
+    with app.app_context():
+        ex_id = _exercice("docker", "quiz-docker").id
+
+    codes = [client.post(f"/api/exercises/{ex_id}/submit", json={"answers": {}},
+                         headers=auth).status_code for _ in range(3)]
+    assert codes == [200, 200, 429]
+
+
+def test_correction_refusee_sans_executeur_isole_en_production(client, auth, app):
+    app.config["ALLOW_LOCAL_RUNNER"] = False
+    with app.app_context():
+        ex_id = _exercice("python", "tp-statistiques").id
+
+    data = client.post(f"/api/exercises/{ex_id}/submit", json={"code": "x = 1"},
+                       headers=auth).get_json()
+    assert data["passed"] is False
+    assert "désactivée" in data["output"]
+
+
+def test_service_de_correction_injoignable_signale(client, auth, app, tmp_path):
+    app.config["RUNNER_SOCKET"] = str(tmp_path / "absent.sock")
+    with app.app_context():
+        ex_id = _exercice("python", "tp-statistiques").id
+
+    data = client.post(f"/api/exercises/{ex_id}/submit", json={"code": "x = 1"},
+                       headers=auth).get_json()
+    assert data["passed"] is False
+    assert "indisponible" in data["output"]
