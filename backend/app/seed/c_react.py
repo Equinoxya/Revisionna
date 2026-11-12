@@ -51,6 +51,90 @@ COURSE = {
                 {"type": "callout", "tone": "info", "md": "La fonction renvoyée par `useEffect` est le **nettoyage** : elle évite d'écrire dans un composant qui a déjà disparu de l'écran."},
                 {"type": "text", "md": "Un **hook personnalisé** est une simple fonction dont le nom commence par `use` et qui appelle d'autres hooks. C'est le moyen de partager de la logique entre composants : voyez `frontend/src/lib/useApi.js` et `AuthContext.jsx` dans cette application."},
                 {"type": "quiz", "id": "q1", "question": "Que fait un `useEffect` dont le tableau de dépendances est `[]` ?", "choices": ["Il ne s'exécute jamais", "Il s'exécute à chaque rendu", "Il s'exécute une fois, au montage", "Il boucle"], "answer": "Il s'exécute une fois, au montage", "explanation": "Aucune dépendance, donc aucun motif de le rejouer (deux passages en mode strict, pendant le développement)."},
+                {"type": "quiz", "id": "q2", "question": "À quoi sert la fonction renvoyée par un useEffect ?", "choices": ["À relancer l'effet", "À nettoyer : annuler un abonnement, une minuterie, une requête", "À mettre à jour l'état", "À afficher le composant"], "answer": "À nettoyer : annuler un abonnement, une minuterie, une requête", "explanation": "Elle s'exécute avant l'effet suivant et quand le composant disparaît."},
+                {"type": "quiz", "id": "q3", "question": "Qu'est-ce qu'un hook personnalisé ?", "choices": ["Un composant sans JSX", "Une fonction dont le nom commence par use et qui appelle d'autres hooks", "Une classe React", "Un fichier de configuration"], "answer": "Une fonction dont le nom commence par use et qui appelle d'autres hooks", "explanation": "Il permet de partager une logique entre plusieurs composants."},
+            ],
+        },
+        {
+            "slug": "formulaires-routage-et-contexte",
+            "title": "Formulaires, routage et état partagé",
+            "duration_min": 25,
+            "blocks": [
+                {"type": "text", "md": '''Dans un **formulaire contrôlé**, c'est l'état React qui fait foi : chaque champ affiche une valeur de l'état (`value`) et la met à jour à chaque frappe (`onChange`). On peut alors valider, désactiver un bouton ou afficher une erreur à tout moment.'''},
+                {"type": "code", "lang": "jsx", "code": '''function Connexion({ onConnexion }) {
+  const [email, setEmail] = useState("");
+  const [motDePasse, setMotDePasse] = useState("");
+  const [erreur, setErreur] = useState(null);
+  const [envoi, setEnvoi] = useState(false);
+
+  async function envoyer(evenement) {
+    evenement.preventDefault();            // pas de rechargement de la page
+    setEnvoi(true);
+    setErreur(null);
+    try {
+      await onConnexion({ email, motDePasse });
+    } catch (exception) {
+      setErreur(exception.message);
+    } finally {
+      setEnvoi(false);
+    }
+  }
+
+  return (
+    <form onSubmit={envoyer}>
+      <label>
+        E-mail
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+      </label>
+      <label>
+        Mot de passe
+        <input type="password" value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)} required />
+      </label>
+      {erreur && <p role="alert">{erreur}</p>}
+      <button disabled={envoi}>{envoi ? "Connexion…" : "Se connecter"}</button>
+    </form>
+  );
+}'''},
+                {"type": "callout", "tone": "info", "md": "Un appel réseau a toujours **trois états** : en cours, réussi, en échec. Une interface qui n'en gère qu'un seul laisse l'utilisateur devant un écran figé ou un bouton sur lequel il clique dix fois."},
+                {"type": "text", "md": '''Une application React ne recharge jamais la page : c'est le **routeur** qui affiche le bon composant selon l'URL. Avec React Router :'''},
+                {"type": "code", "lang": "jsx", "code": '''<BrowserRouter>
+  <Routes>
+    <Route path="/" element={<Sommaire />} />
+    <Route path="/cours/:slug" element={<Cours />} />
+    <Route path="*" element={<Introuvable />} />
+  </Routes>
+</BrowserRouter>
+
+function Cours() {
+  const { slug } = useParams();              // la partie variable de l'URL
+  const naviguer = useNavigate();            // changer de page depuis le code
+  return <Link to="/">Retour au sommaire</Link>;   // jamais <a href> en interne
+}'''},
+                {"type": "text", "md": '''Quand deux composants ont besoin de la même donnée, on la **remonte** dans leur parent commun, qui la redistribue par les props. Quand la donnée concerne toute l'application (l'utilisateur connecté, le thème), la faire descendre de composant en composant devient pénible. Le **contexte** la rend disponible partout, sans intermédiaire.'''},
+                {"type": "code", "lang": "jsx", "code": '''const AuthContext = createContext(null);
+
+export function AuthProvider({ children }) {
+  const [utilisateur, setUtilisateur] = useState(null);
+  return (
+    <AuthContext.Provider value={{ utilisateur, setUtilisateur }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export const useAuth = () => useContext(AuthContext);
+
+// n'importe où dans l'arbre :
+function EnTete() {
+  const { utilisateur } = useAuth();
+  return <span>{utilisateur ? utilisateur.nom : "Invité"}</span>;
+}'''},
+                {"type": "text", "md": "C'est le fonctionnement de cette application : `frontend/src/lib/AuthContext.jsx` garde l'utilisateur connecté, et `ProtectedRoute.jsx` redirige vers la connexion quand il n'y en a pas."},
+                {"type": "callout", "tone": "warn", "md": "Masquer un bouton dans l'interface n'est pas une protection : tout le code du frontend est lisible et modifiable par l'utilisateur. Les droits se vérifient **côté serveur**, à chaque requête."},
+                {"type": "quiz", "id": "q1", "question": "Dans un champ contrôlé, d'où vient la valeur affichée ?", "choices": ["Du DOM", "De l'état React", "Du serveur", "Du localStorage"], "answer": "De l'état React", "explanation": "`value` lit l'état, `onChange` le met à jour."},
+                {"type": "quiz", "id": "q2", "question": "Pourquoi appeler `preventDefault()` à l'envoi d'un formulaire ?", "choices": ["Pour vider les champs", "Pour empêcher le navigateur de recharger la page", "Pour valider les champs", "Pour chiffrer les données"], "answer": "Pour empêcher le navigateur de recharger la page", "explanation": "On traite l'envoi nous-mêmes, avec un appel réseau."},
+                {"type": "quiz", "id": "q3", "question": "Quand utiliser un contexte ?", "choices": ["Pour chaque état", "Pour une donnée utile à toute l'application, comme l'utilisateur connecté", "Pour remplacer les props partout", "Jamais"], "answer": "Pour une donnée utile à toute l'application, comme l'utilisateur connecté", "explanation": "Pour un état local, `useState` et les props restent plus simples."},
+                {"type": "quiz", "id": "q4", "question": "Un bouton réservé aux administrateurs est masqué dans l'interface. Est-ce suffisant ?", "choices": ["Oui", "Non : le serveur doit vérifier les droits à chaque requête", "Oui, si le code est minifié", "Oui, avec un contexte"], "answer": "Non : le serveur doit vérifier les droits à chaque requête", "explanation": "Le frontend s'exécute chez l'utilisateur, qui peut le contourner."},
             ],
         },
     ],
@@ -117,6 +201,10 @@ Contrainte : ne modifiez jamais `etat` directement, renvoyez un nouveau dictionn
                 {"id": "2", "question": "Peut-on écrire `items.push(x)` sur un état ?", "choices": ["Oui", "Non : il faut setItems([...items, x])", "Oui, avec useRef", "Oui, si on force un rendu"], "answer": "Non : il faut setItems([...items, x])", "explanation": "React compare les références : modifier le tableau en place ne déclenche aucun rendu."},
                 {"id": "3", "question": "Que faire d'une valeur qui se déduit d'un autre état ?", "choices": ["La dupliquer dans un useState", "La calculer pendant le rendu", "La stocker dans le navigateur", "La mettre dans un useEffect"], "answer": "La calculer pendant le rendu", "explanation": "Dupliquer une valeur dérivée, c'est s'exposer à des incohérences."},
                 {"id": "4", "question": "Quelle `key` pour une liste qu'on peut réordonner ?", "choices": ["L'index du tableau", "Un identifiant stable de la donnée", "Math.random()", "Le texte affiché"], "answer": "Un identifiant stable de la donnée", "explanation": "L'index change quand l'ordre change, et `Math.random()` change à chaque rendu."},
+                {"id": "5", "question": "Comment un enfant prévient-il son parent d'un événement ?", "choices": ["En modifiant les props", "En appelant une fonction reçue en prop", "En modifiant l'état du parent directement", "C'est impossible"], "answer": "En appelant une fonction reçue en prop", "explanation": "Les données descendent par les props, les événements remontent par des fonctions."},
+                {"id": "6", "question": "Un composant peut-il modifier ses props ?", "choices": ["Oui", "Non, elles sont en lecture seule", "Seulement dans un effet", "Seulement avec useState"], "answer": "Non, elles sont en lecture seule", "explanation": "Seul le parent, qui les fournit, peut les changer."},
+                {"id": "7", "question": "Quel composant utiliser pour un lien interne avec React Router ?", "choices": ["<a href>", "<Link to>", "<button>", "<Route>"], "answer": "<Link to>", "explanation": "`<a href>` recharge toute la page et fait perdre l'état de l'application."},
+                {"id": "8", "question": "Que provoque `setValeur(valeur)` avec une valeur identique à l'actuelle ?", "choices": ["Un nouvel affichage complet", "Rien : React ignore la mise à jour", "Une erreur", "Une boucle infinie"], "answer": "Rien : React ignore la mise à jour", "explanation": "React compare l'ancienne et la nouvelle valeur avant de réafficher."},
             ]},
         },
     ],

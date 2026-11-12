@@ -45,7 +45,7 @@ def test_progression_visible_dans_le_tableau_de_bord(client, auth):
     assert data["totals"]["lessons_done"] == 1
     python = next(c for c in data["courses"] if c["slug"] == "python")
     assert python["lessons_done"] == 1
-    assert python["lessons_total"] == 3
+    assert python["lessons_total"] == 4
 
 
 def test_validation_idempotente(client, auth):

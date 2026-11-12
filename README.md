@@ -1,8 +1,8 @@
 # Revisionna
 
 Application de revision : **lecons interactives** d'un cote, **TP corriges automatiquement** de l'autre,
-sur les 11 cours de l'annee (Python, Flask, Django, React, SQL, NoSQL, Machine Learning,
-integration IA, Docker, CI/CD, deploiement).
+sur les 14 cours de l'annee (Python, Flask, Django, React, SQL, NoSQL, Machine Learning,
+integration IA, systeme Linux, reseaux, bases du DevOps, Docker, CI/CD, deploiement).
 
 L'application est elle-meme un cas d'etude : elle utilise la plupart des technos qu'elle enseigne.
 
@@ -50,7 +50,7 @@ pip install -r requirements-dev.txt
 cp .env.example .env            # ajustez SECRET_KEY et JWT_SECRET_KEY
 
 flask --app wsgi:app init-db    # cree les tables
-flask --app wsgi:app seed       # charge les 11 cours
+flask --app wsgi:app seed       # charge les 14 cours
 flask --app wsgi:app run        # http://localhost:5000
 ```
 
@@ -152,3 +152,17 @@ Voir [docs/architecture.md](docs/architecture.md) pour le detail. En resume :
 Creez `backend/app/seed/c_moncours.py` sur le modele des autres, ajoutez-le a `CATALOG` dans
 `backend/app/seed/__init__.py`, puis relancez `flask --app wsgi:app seed`. Le chargement est
 idempotent : il met a jour l'existant sans toucher aux comptes ni a la progression.
+
+### Ajouter la video d'une lecon
+
+Chaque lecon reserve un emplacement video en tete de page (« Video explicative a venir »).
+Pour la renseigner, ajoutez la cle `"video"` a la lecon dans son fichier de cours, puis rejouez le `seed` :
+
+```python
+{
+    "slug": "shell-et-arborescence",
+    "title": "Le shell et l'arborescence",
+    "video": "https://exemple.fr/videos/shell.mp4",   # fichier MP4 ou WebM, servi en HTTPS
+    ...
+}
+```

@@ -22,6 +22,19 @@ export default function Lecon() {
 
 function Bloc({ bloc, numero, reponses, setReponses, resultat }) {
   switch (bloc.type) {
+    case "video":
+      // L'emplacement existe pour chaque leçon ; l'URL se renseigne dans le catalogue (clé "video").
+      return bloc.url ? (
+        <figure className="video">
+          <video controls preload="metadata" src={bloc.url}>
+            <a href={bloc.url}>Voir la vidéo explicative</a>
+          </video>
+        </figure>
+      ) : (
+        <p className="video a-venir">
+          <Icon nom="video" taille={18} /> Vidéo explicative à venir.
+        </p>
+      );
     case "text":
       return <Markdown>{bloc.md}</Markdown>;
     case "code":

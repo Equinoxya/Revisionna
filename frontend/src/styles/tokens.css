@@ -32,6 +32,7 @@
   --cat-donnees: #7a54c7;
   --cat-ia: #d6457f;
   --cat-devops: #c79a12;
+  --cat-systeme: #1f8a8a;
   --cat-autre: #7c8499;
 
   --ombre: 0 1px 0 rgba(27, 36, 64, 0.06), 0 10px 30px -18px rgba(27, 36, 64, 0.35);
@@ -65,6 +66,7 @@
   --cat-donnees: #c2a8f2;
   --cat-ia: #f29bbf;
   --cat-devops: #ecd06a;
+  --cat-systeme: #7fd1cf;
   --cat-autre: #adb9b0;
 
   --ombre: 0 1px 0 rgba(0, 0, 0, 0.25), 0 14px 34px -18px rgba(0, 0, 0, 0.7);

@@ -5,6 +5,7 @@ from . import (
     c_aiops,
     c_cicd,
     c_deploy,
+    c_devops,
     c_django,
     c_docker,
     c_flask,
@@ -12,7 +13,9 @@ from . import (
     c_nosql,
     c_python,
     c_react,
+    c_reseau,
     c_sql,
+    c_systeme,
 )
 
 CATALOG = [
@@ -24,10 +27,22 @@ CATALOG = [
     c_nosql.COURSE,
     c_ml.COURSE,
     c_aiops.COURSE,
+    c_systeme.COURSE,
+    c_reseau.COURSE,
+    c_devops.COURSE,
     c_docker.COURSE,
     c_cicd.COURSE,
     c_deploy.COURSE,
 ]
+
+
+def _blocs(lesson_spec: dict) -> list[dict]:
+    """Blocs d'une leçon, précédés de l'emplacement de sa vidéo explicative.
+
+    Tant que la leçon n'a pas de clé "video" (une URL), le lecteur affiche « à venir ».
+    """
+    video = {"type": "video", "url": lesson_spec.get("video", "")}
+    return [video, *lesson_spec.get("blocks", [])]
 
 
 def load(reset: bool = False) -> dict:
@@ -65,7 +80,7 @@ def load(reset: bool = False) -> dict:
                 db.session.add(lesson)
             lesson.title = lesson_spec["title"]
             lesson.duration_min = lesson_spec.get("duration_min", 10)
-            lesson.blocks = lesson_spec.get("blocks", [])
+            lesson.blocks = _blocs(lesson_spec)
             lesson.position = index
             counts["lessons"] += 1
 
