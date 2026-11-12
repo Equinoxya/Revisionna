@@ -87,6 +87,74 @@ def ajouter(etudiant, note):
         raise NoteInvalide(f"note hors bornes : {note}")
     etudiant.notes.append(note)'''},
                 {"type": "quiz", "id": "q1", "question": "Pourquoi éviter `except Exception: pass` ?", "choices": ["C'est plus lent", "Cela masque les vrais bugs", "Python l'interdit", "Cela consomme de la mémoire"], "answer": "Cela masque les vrais bugs", "explanation": "Vous avalez aussi les erreurs que vous n'aviez pas prévues : le bug devient invisible."},
+                {"type": "quiz", "id": "q2", "question": "Que désigne `self` dans une méthode ?", "choices": ["La classe", "L'instance sur laquelle la méthode est appelée", "Le module", "Le parent de la classe"], "answer": "L'instance sur laquelle la méthode est appelée", "explanation": "`e.moyenne()` revient à `Etudiant.moyenne(e)` : Python passe l'instance en premier argument."},
+                {"type": "quiz", "id": "q3", "question": "Dans try / except / finally, quand le bloc finally s'exécute-t-il ?", "choices": ["Seulement s'il y a une erreur", "Seulement s'il n'y en a pas", "Toujours", "Jamais si except attrape l'erreur"], "answer": "Toujours", "explanation": "C'est l'endroit où libérer une ressource, erreur ou non."},
+            ],
+        },
+        {
+            "slug": "fichiers-modules-et-environnement",
+            "title": "Fichiers, modules et environnement virtuel",
+            "duration_min": 20,
+            "blocks": [
+                {"type": "text", "md": '''Un programme utile lit et écrit des **fichiers**. On les ouvre toujours avec `with` : le fichier est refermé à la sortie du bloc, même si une erreur survient. Précisez l'encodage : sans lui, Python prend celui du système, et vos accents se cassent d'une machine à l'autre.'''},
+                {"type": "code", "lang": "python", "code": '''import json
+from pathlib import Path
+
+dossier = Path("donnees")
+dossier.mkdir(exist_ok=True)
+fichier = dossier / "notes.json"          # / assemble les chemins
+
+# écrire
+with fichier.open("w", encoding="utf-8") as f:
+    json.dump({"alice": 14, "bob": 9}, f, ensure_ascii=False, indent=2)
+
+# lire
+with fichier.open(encoding="utf-8") as f:
+    notes = json.load(f)
+
+# parcourir un fichier texte ligne par ligne, sans tout charger en mémoire
+with open("journal.log", encoding="utf-8") as f:
+    erreurs = [ligne.strip() for ligne in f if "ERROR" in ligne]'''},
+                {"type": "text", "md": '''Les modes d'ouverture : `"r"` lecture (par défaut), `"w"` écriture **en écrasant**, `"a"` ajout à la fin, `"b"` binaire (images, archives).
+
+`pathlib.Path` remplace avantageusement les chaînes de caractères : `chemin.exists()`, `chemin.suffix`, `chemin.read_text()`, `chemin.glob("*.py")`.'''},
+                {"type": "text", "md": '''Dès qu'un fichier dépasse quelques centaines de lignes, on le découpe en **modules**. Un module est simplement un fichier `.py` ; un **paquet** est un dossier de modules.
+
+```python
+import math                        # tout le module : math.sqrt(2)
+from statistics import mean        # un seul nom
+from app.services import ai        # un module d'un paquet
+```
+
+Un module est exécuté **une seule fois**, à son premier import. Pour qu'un fichier serve à la fois de module et de script, on protège le code à lancer :'''},
+                {"type": "code", "lang": "python", "code": '''# outils.py
+def moyenne(notes):
+    return sum(notes) / len(notes)
+
+
+if __name__ == "__main__":
+    # exécuté avec « python outils.py », ignoré lors d'un « import outils »
+    print(moyenne([12, 15, 9]))'''},
+                {"type": "text", "md": '''Chaque projet a ses dépendances, dans ses versions. Un **environnement virtuel** les isole : ce que vous installez pour un projet ne casse pas les autres.'''},
+                {"type": "code", "lang": "bash", "code": '''python3 -m venv .venv              # créer l'environnement
+source .venv/bin/activate          # l'activer (Windows : .venv\\Scripts\\activate)
+pip install flask                  # installer dans l'environnement
+pip freeze > requirements.txt      # figer les versions
+pip install -r requirements.txt    # reproduire ailleurs'''},
+                {"type": "callout", "tone": "warn", "md": "Le dossier `.venv` ne se partage pas : il va dans `.gitignore`. Ce qu'on met dans le dépôt, c'est `requirements.txt`, qui permet de le reconstruire."},
+                {"type": "text", "md": '''Les **annotations de type** documentent ce qu'une fonction attend et renvoie. Python ne les vérifie pas à l'exécution, mais votre éditeur et des outils comme `mypy` s'en servent pour repérer les erreurs avant le lancement.
+
+```python
+def moyenne(notes: list[float]) -> float:
+    return sum(notes) / len(notes)
+
+def chercher(nom: str, annuaire: dict[str, int]) -> int | None:
+    return annuaire.get(nom)
+```'''},
+                {"type": "quiz", "id": "q1", "question": "Pourquoi ouvrir un fichier avec `with` ?", "choices": ["C'est plus rapide", "Le fichier est refermé automatiquement, même en cas d'erreur", "C'est obligatoire pour lire", "Pour le chiffrer"], "answer": "Le fichier est refermé automatiquement, même en cas d'erreur", "explanation": "`with` garantit la libération de la ressource."},
+                {"type": "quiz", "id": "q2", "question": "Que fait le mode d'ouverture \"w\" sur un fichier existant ?", "choices": ["Il ajoute à la fin", "Il écrase le contenu", "Il lève une erreur", "Il ouvre en lecture"], "answer": "Il écrase le contenu", "explanation": "Pour ajouter sans effacer, c'est le mode \"a\"."},
+                {"type": "quiz", "id": "q3", "question": "À quoi sert un environnement virtuel ?", "choices": ["À accélérer Python", "À isoler les dépendances de chaque projet", "À chiffrer le code", "À exécuter du code sans Python"], "answer": "À isoler les dépendances de chaque projet", "explanation": "Deux projets peuvent ainsi utiliser deux versions différentes de la même bibliothèque."},
+                {"type": "quiz", "id": "q4", "question": "Quand le bloc `if __name__ == \"__main__\":` s'exécute-t-il ?", "choices": ["À chaque import", "Quand le fichier est lancé directement", "Jamais", "Seulement dans les tests"], "answer": "Quand le fichier est lancé directement", "explanation": "À l'import, `__name__` vaut le nom du module, pas `__main__`."},
             ],
         },
     ],
@@ -210,6 +278,64 @@ def repartition(notes):
                 {"name": "retirer", "code": "p = Panier()\np.ajouter('thé', 3.0)\np.retirer('thé')\nassert len(p) == 0"},
                 {"name": "retirer_absent", "code": "p = Panier()\ntry:\n    p.retirer('café')\nexcept KeyError:\n    pass\nelse:\n    raise AssertionError('KeyError attendue')"},
                 {"name": "prix_negatif", "code": "p = Panier()\ntry:\n    p.ajouter('thé', -1)\nexcept ValueError:\n    pass\nelse:\n    raise AssertionError('ValueError attendue')"},
+            ]},
+        },
+        {
+            "slug": "tp-comptage-mots",
+            "title": "Compter les mots d'un texte",
+            "kind": "python",
+            "difficulty": "facile",
+            "statement": '''Écrivez `mots_frequents(texte, n=3)`, qui renvoie les `n` mots les plus fréquents d'un texte, sous la forme d'une liste de couples `(mot, nombre)`.
+
+- la casse est ignorée : `Python` et `python` sont le même mot ;
+- la ponctuation `. , ; : ! ?` est retirée ;
+- les plus fréquents d'abord ; à égalité, par ordre alphabétique.
+
+```python
+mots_frequents("Le chat. Le chien, le chat !", 2)  # [("le", 3), ("chat", 2)]
+```''',
+            "starter_code": '''def mots_frequents(texte, n=3):
+    ...
+''',
+            "solution": '''def mots_frequents(texte, n=3):
+    for signe in ".,;:!?":
+        texte = texte.replace(signe, " ")
+
+    compte = {}
+    for mot in texte.lower().split():
+        compte[mot] = compte.get(mot, 0) + 1
+
+    classement = sorted(compte.items(), key=lambda couple: (-couple[1], couple[0]))
+    return classement[:n]
+''',
+            "hints": [
+                "Remplacez chaque signe de ponctuation par une espace, puis utilisez `split()`.",
+                "Un dictionnaire `{mot: nombre}` fait le comptage : `compte.get(mot, 0) + 1`.",
+                "Triez `compte.items()` avec la clé `(-nombre, mot)`.",
+            ],
+            "spec": {"tests": [
+                {"name": "exemple", "code": "assert mots_frequents('Le chat. Le chien, le chat !', 2) == [('le', 3), ('chat', 2)]"},
+                {"name": "casse_ignoree", "code": "assert mots_frequents('Python python PYTHON', 1) == [('python', 3)]"},
+                {"name": "egalite_alphabetique", "code": "assert mots_frequents('b a c', 3) == [('a', 1), ('b', 1), ('c', 1)]"},
+                {"name": "n_par_defaut", "code": "assert len(mots_frequents('a b c d e')) == 3"},
+                {"name": "texte_vide", "code": "assert mots_frequents('') == []"},
+            ]},
+        },
+        {
+            "slug": "quiz-python",
+            "title": "Python sans hésiter",
+            "kind": "quiz",
+            "difficulty": "facile",
+            "statement": "Les réflexes à avoir sur les bases du langage.",
+            "spec": {"questions": [
+                {"id": "1", "question": "Que vaut `[1, 2, 3][-1]` ?", "choices": ["1", "3", "Une erreur", "[3]"], "answer": "3", "explanation": "Un indice négatif compte depuis la fin."},
+                {"id": "2", "question": "Quelle structure garantit l'unicité de ses éléments ?", "choices": ["list", "tuple", "set", "str"], "answer": "set", "explanation": "Un ensemble ne contient jamais deux fois la même valeur."},
+                {"id": "3", "question": "Que renvoie `{\"a\": 1}.get(\"b\", 0)` ?", "choices": ["None", "0", "Une KeyError", "1"], "answer": "0", "explanation": "`get` renvoie la valeur par défaut quand la clé manque, sans lever d'erreur."},
+                {"id": "4", "question": "Un tuple est-il modifiable ?", "choices": ["Oui", "Non, il est immuable", "Seulement s'il est vide", "Seulement avec append"], "answer": "Non, il est immuable", "explanation": "C'est ce qui lui permet de servir de clé de dictionnaire."},
+                {"id": "5", "question": "Que vaut `\"a,b,c\".split(\",\")` ?", "choices": ["\"abc\"", "[\"a\", \"b\", \"c\"]", "(\"a\", \"b\", \"c\")", "3"], "answer": "[\"a\", \"b\", \"c\"]", "explanation": "`split` découpe une chaîne en liste ; `\",\".join(...)` fait l'inverse."},
+                {"id": "6", "question": "Quelle différence entre `==` et `is` ?", "choices": ["Aucune", "== compare les valeurs, is compare l'identité des objets", "is compare les valeurs", "== ne fonctionne que sur les nombres"], "answer": "== compare les valeurs, is compare l'identité des objets", "explanation": "On réserve `is` à `None` : `if x is None`."},
+                {"id": "7", "question": "Quel fichier liste les dépendances d'un projet Python ?", "choices": ["package.json", "requirements.txt", "Dockerfile", ".gitignore"], "answer": "requirements.txt", "explanation": "On l'installe avec `pip install -r requirements.txt`."},
+                {"id": "8", "question": "Que produit `range(2, 8, 2)` ?", "choices": ["2, 4, 6", "2, 4, 6, 8", "2, 8", "0, 2, 4, 6"], "answer": "2, 4, 6", "explanation": "La borne de fin est exclue."},
             ]},
         },
     ],

@@ -76,6 +76,89 @@ class CoursViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]'''},
                 {"type": "text", "md": "**Flask ou Django ?** Flask pour une petite API dont on veut choisir chaque brique ; Django quand on veut l'administration, l'authentification et les migrations prêtes à l'emploi."},
                 {"type": "quiz", "id": "q1", "question": "Quel est le rôle d'un serializer ?", "choices": ["Produire du HTML", "Valider les entrées et convertir entre modèle et JSON", "Gérer les migrations", "Router les URL"], "answer": "Valider les entrées et convertir entre modèle et JSON", "explanation": "C'est l'équivalent du formulaire, côté API."},
+                {"type": "quiz", "id": "q2", "question": "Que fournit un ModelViewSet ?", "choices": ["Uniquement la lecture", "Les opérations de liste, lecture, création, modification et suppression", "Un gabarit HTML", "Une migration"], "answer": "Les opérations de liste, lecture, création, modification et suppression", "explanation": "Associé à un routeur, il génère toutes les routes d'une ressource."},
+                {"type": "quiz", "id": "q3", "question": "Vous voulez l'administration et l'authentification sans rien assembler. Que choisir ?", "choices": ["Flask", "Django", "Aucun des deux", "Les deux en même temps"], "answer": "Django", "explanation": "Django est livré « piles incluses » ; Flask laisse choisir chaque brique."},
+            ],
+        },
+        {
+            "slug": "vues-formulaires-et-tests",
+            "title": "Vues, formulaires, authentification et tests",
+            "duration_min": 25,
+            "blocks": [
+                {"type": "text", "md": '''Une requête traverse Django dans cet ordre : les **middlewares**, le **routeur** (`urls.py`), la **vue**, puis le chemin inverse pour la réponse. La vue reçoit un objet `request` et renvoie une `HttpResponse`.'''},
+                {"type": "code", "lang": "python", "code": '''# cours/urls.py
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path("", views.liste, name="cours-liste"),
+    path("<slug:slug>/", views.detail, name="cours-detail"),
+]
+
+# cours/views.py
+from django.shortcuts import get_object_or_404, render
+
+
+def detail(request, slug):
+    cours = get_object_or_404(Cours, slug=slug, publie=True)
+    return render(request, "cours/detail.html", {"cours": cours})'''},
+                {"type": "text", "md": '''`get_object_or_404` évite le `try / except DoesNotExist` : si rien ne correspond, Django répond 404. Le paramètre `name` permet de retrouver une URL sans l'écrire en dur : `{% url 'cours-detail' cours.slug %}` dans un gabarit, `reverse("cours-detail", args=[slug])` en Python.
+
+Les **formulaires** valident les données entrantes. Un `ModelForm` se déduit d'un modèle : il génère les champs, valide, puis enregistre.'''},
+                {"type": "code", "lang": "python", "code": '''class CoursForm(forms.ModelForm):
+    class Meta:
+        model = Cours
+        fields = ["titre", "niveau"]
+
+    def clean_titre(self):
+        titre = self.cleaned_data["titre"].strip()
+        if len(titre) < 3:
+            raise forms.ValidationError("Titre trop court.")
+        return titre
+
+
+def creer(request):
+    form = CoursForm(request.POST or None)
+    if form.is_valid():
+        form.save()
+        return redirect("cours-liste")
+    return render(request, "cours/form.html", {"form": form})'''},
+                {"type": "callout", "tone": "warn", "md": "Tout formulaire en `POST` doit contenir `{% csrf_token %}`. Sans ce jeton, un autre site pourrait faire envoyer le formulaire par le navigateur d'un utilisateur connecté : c'est l'attaque **CSRF**. Django la bloque par défaut ; ne désactivez pas cette protection."},
+                {"type": "text", "md": '''L'**authentification** est fournie : modèle `User`, hachage des mots de passe, sessions, connexion et déconnexion. On protège une vue en une ligne.
+
+```python
+from django.contrib.auth.decorators import login_required, permission_required
+
+@login_required
+def tableau_de_bord(request):
+    return render(request, "bord.html", {"utilisateur": request.user})
+
+@permission_required("cours.add_cours")
+def creer(request): ...
+```
+
+Avec Django REST Framework, la même idée s'écrit `permission_classes = [IsAuthenticated]`.'''},
+                {"type": "text", "md": '''Les **tests** utilisent une base temporaire, créée puis détruite à chaque exécution. Le client de test simule les requêtes sans serveur.'''},
+                {"type": "code", "lang": "python", "code": '''from django.test import TestCase
+from django.urls import reverse
+
+
+class CoursTests(TestCase):
+    def setUp(self):
+        Cours.objects.create(titre="Django", slug="django", publie=True)
+
+    def test_detail(self):
+        reponse = self.client.get(reverse("cours-detail", args=["django"]))
+        self.assertEqual(reponse.status_code, 200)
+        self.assertContains(reponse, "Django")
+
+    def test_cours_inconnu(self):
+        reponse = self.client.get(reverse("cours-detail", args=["perl"]))
+        self.assertEqual(reponse.status_code, 404)'''},
+                {"type": "quiz", "id": "q1", "question": "Que fait `get_object_or_404` si aucun objet ne correspond ?", "choices": ["Il renvoie None", "Il déclenche une réponse 404", "Il crée l'objet", "Il renvoie une liste vide"], "answer": "Il déclenche une réponse 404", "explanation": "Une ligne au lieu d'un `try / except DoesNotExist`."},
+                {"type": "quiz", "id": "q2", "question": "À quoi sert `{% csrf_token %}` ?", "choices": ["À chiffrer le formulaire", "À empêcher qu'un autre site fasse soumettre le formulaire à votre place", "À valider les champs", "À connecter l'utilisateur"], "answer": "À empêcher qu'un autre site fasse soumettre le formulaire à votre place", "explanation": "Le jeton prouve que la requête vient bien d'une page servie par votre site."},
+                {"type": "quiz", "id": "q3", "question": "Quel décorateur réserve une vue aux utilisateurs connectés ?", "choices": ["@staticmethod", "@login_required", "@csrf_exempt", "@property"], "answer": "@login_required", "explanation": "Un visiteur anonyme est redirigé vers la page de connexion."},
+                {"type": "quiz", "id": "q4", "question": "Sur quelle base tournent les tests Django ?", "choices": ["La base de production", "Une base temporaire créée pour l'occasion", "Aucune", "La base de développement"], "answer": "Une base temporaire créée pour l'occasion", "explanation": "Les tests ne touchent jamais à vos vraies données."},
             ],
         },
     ],
@@ -161,6 +244,10 @@ class CoursViewSet(viewsets.ModelViewSet):
                 {"id": "3", "question": "Que signifie `on_delete=models.CASCADE` ?", "choices": ["La suppression est interdite", "Les objets liés sont supprimés aussi", "La clé passe à NULL", "L'objet est archivé"], "answer": "Les objets liés sont supprimés aussi", "explanation": "`PROTECT` interdit la suppression, `SET_NULL` vide la clé."},
                 {"id": "4", "question": "Quel réglage ne doit JAMAIS valoir True en production ?", "choices": ["USE_TZ", "DEBUG", "ALLOWED_HOSTS", "USE_I18N"], "answer": "DEBUG", "explanation": "`DEBUG=True` expose la configuration et le détail des erreurs."},
                 {"id": "5", "question": "Comment compter sans charger les objets en mémoire ?", "choices": ["len(qs.all())", "qs.count()", "list(qs)", "qs[:]"], "answer": "qs.count()", "explanation": "`count()` délègue un `SELECT COUNT(*)` à la base."},
+                {"id": "6", "question": "Quelle commande crée un compte administrateur ?", "choices": ["manage.py runserver", "manage.py createsuperuser", "manage.py startapp", "manage.py shell"], "answer": "manage.py createsuperuser", "explanation": "Ce compte donne accès à l'interface `/admin/`."},
+                {"id": "7", "question": "Quelle différence entre un projet et une application Django ?", "choices": ["Aucune", "Le projet regroupe la configuration, les applications portent chacune un domaine", "Une application contient plusieurs projets", "Le projet ne contient pas de code"], "answer": "Le projet regroupe la configuration, les applications portent chacune un domaine", "explanation": "On crée une application avec `manage.py startapp`."},
+                {"id": "8", "question": "Que renvoie `Cours.objects.filter(publie=True)` tant qu'on ne le parcourt pas ?", "choices": ["Une liste déjà chargée", "Un QuerySet paresseux : aucune requête n'est partie", "Une erreur", "Le premier cours"], "answer": "Un QuerySet paresseux : aucune requête n'est partie", "explanation": "La requête SQL n'est exécutée qu'au moment où l'on a besoin des résultats."},
+                {"id": "9", "question": "Comment retrouver une URL sans l'écrire en dur ?", "choices": ["En la copiant", "Avec son nom : `reverse()` ou `{% url %}`", "Avec `request.path`", "C'est impossible"], "answer": "Avec son nom : `reverse()` ou `{% url %}`", "explanation": "Changer le chemin dans `urls.py` ne casse alors aucun lien."},
             ]},
         },
     ],

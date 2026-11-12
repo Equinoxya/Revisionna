@@ -103,7 +103,7 @@ class Lesson(db.Model):
     title = db.Column(db.String(160), nullable=False)
     duration_min = db.Column(db.Integer, default=10)
     position = db.Column(db.Integer, default=0)
-    # Contenu interactif : liste de blocs {type: text | code | callout | quiz, ...}
+    # Contenu interactif : liste de blocs {type: video | text | code | callout | quiz, ...}
     blocks = db.Column(db.JSON, default=list)
 
     course = db.relationship("Course", back_populates="lessons")

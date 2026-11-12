@@ -32,6 +32,7 @@
 .cat-donnees { --couleur: var(--cat-donnees); }
 .cat-ia { --couleur: var(--cat-ia); }
 .cat-devops { --couleur: var(--cat-devops); }
+.cat-systeme-et-reseaux { --couleur: var(--cat-systeme); }
 
 /* --- La note, entourée au stylo rouge ------------------------------------------- */
 
@@ -254,6 +255,30 @@
   color: var(--papier);
   background: var(--encre);
   padding: 0.1rem 0.5rem;
+}
+
+/* --- Vidéo explicative de la leçon -------------------------------------------------- */
+
+.video {
+  max-width: calc(var(--mesure) + 5rem);
+  margin: 1.3em 0;
+}
+
+.video video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+
+.video.a-venir {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.8rem 1.1rem;
+  color: var(--encre-2);
+  background: var(--papier-2);
+  border: 1px dashed var(--trait-fort);
 }
 
 /* --- Annotation en marge (à retenir / attention) ------------------------------------ */

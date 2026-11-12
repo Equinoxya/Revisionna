@@ -66,6 +66,85 @@ def client():
         db.create_all()
         yield app.test_client()'''},
                 {"type": "quiz", "id": "q1", "question": "À quoi sert une fabrique d'application ?", "choices": ["À aller plus vite", "À créer plusieurs applications avec des configurations différentes (test, production)", "Elle est obligatoire depuis Flask 3", "À se passer des blueprints"], "answer": "À créer plusieurs applications avec des configurations différentes (test, production)", "explanation": "Elle supprime l'état global et rend les tests indépendants les uns des autres."},
+                {"type": "quiz", "id": "q2", "question": "À quoi sert un blueprint ?", "choices": ["À dessiner l'interface", "À regrouper des routes par domaine, dans un module à part", "À chiffrer les sessions", "À remplacer la base de données"], "answer": "À regrouper des routes par domaine, dans un module à part", "explanation": "Chaque blueprint est ensuite enregistré dans la fabrique avec `app.register_blueprint`."},
+                {"type": "quiz", "id": "q3", "question": "Pourquoi le client de test n'a-t-il pas besoin d'un serveur lancé ?", "choices": ["Il se connecte à la production", "Il appelle l'application directement, en mémoire", "Il simule un navigateur graphique", "Il lit les réponses dans un fichier"], "answer": "Il appelle l'application directement, en mémoire", "explanation": "Les tests sont rapides et ne dépendent d'aucun port réseau."},
+            ],
+        },
+        {
+            "slug": "base-de-donnees-et-authentification",
+            "title": "Base de données, authentification et erreurs",
+            "duration_min": 25,
+            "blocks": [
+                {"type": "text", "md": '''Flask ne fournit pas de base de données : on lui ajoute **SQLAlchemy**, un ORM. Une classe Python décrit une table, une instance décrit une ligne. Les modifications s'accumulent dans une **session**, et ne partent vers la base qu'au `commit`.'''},
+                {"type": "code", "lang": "python", "code": '''from app.extensions import db
+
+
+class Cours(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(80), unique=True, nullable=False)
+    titre = db.Column(db.String(200), nullable=False)
+    lecons = db.relationship("Lecon", backref="cours", cascade="all, delete-orphan")
+
+
+# créer
+cours = Cours(slug="flask", titre="Flask")
+db.session.add(cours)
+db.session.commit()
+
+# lire
+Cours.query.filter_by(slug="flask").first()
+Cours.query.order_by(Cours.titre).all()
+
+# en cas d'erreur, on annule tout ce qui était en attente
+db.session.rollback()'''},
+                {"type": "text", "md": '''Quand un modèle change, la base doit suivre. Une **migration** est un script versionné qui fait passer le schéma d'un état au suivant. Avec Flask-Migrate (Alembic) :
+
+```bash
+flask db migrate -m "ajout de la colonne niveau"   # génère le script
+flask db upgrade                                   # l'applique
+flask db downgrade                                 # revient en arrière
+```
+
+Relisez toujours le script généré : l'outil devine, il ne comprend pas. Un renommage de colonne, par exemple, est vu comme une suppression suivie d'un ajout — donc une perte de données.'''},
+                {"type": "text", "md": '''**Authentification.** Deux règles ne se discutent pas :
+
+1. on ne stocke **jamais** un mot de passe en clair, mais son **hachage** (argon2 ou bcrypt), impossible à inverser ;
+2. le serveur ne fait confiance à rien de ce qui vient du client.
+
+Une API sans état utilise souvent un **JWT** : à la connexion, le serveur signe un jeton qui contient l'identifiant de l'utilisateur et une date d'expiration. Le client le renvoie à chaque requête ; le serveur vérifie la signature, sans consulter de table de sessions.'''},
+                {"type": "code", "lang": "python", "code": '''from flask_jwt_extended import create_access_token, current_user, jwt_required
+
+
+@bp.post("/login")
+def login():
+    data = request.get_json(silent=True) or {}
+    user = User.query.filter_by(email=data.get("email", "")).first()
+    if user is None or not user.check_password(data.get("password", "")):
+        # même message dans les deux cas : on ne révèle pas si le compte existe
+        return jsonify({"error": "Identifiants invalides."}), 401
+    return jsonify({"token": create_access_token(identity=str(user.id))})
+
+
+@bp.get("/me")
+@jwt_required()
+def me():
+    return jsonify({"user": current_user.to_dict()})'''},
+                {"type": "callout", "tone": "warn", "md": "Un JWT est **signé**, pas chiffré : n'importe qui peut en lire le contenu. N'y mettez ni mot de passe ni donnée sensible, et donnez-lui une durée de vie courte."},
+                {"type": "text", "md": '''**Erreurs.** Plutôt que de répéter des `try / except` dans chaque vue, on centralise : un gestionnaire transforme chaque erreur en réponse JSON cohérente. Le client reçoit toujours la même forme, et aucune trace d'exécution ne fuit vers l'extérieur.'''},
+                {"type": "code", "lang": "python", "code": '''@app.errorhandler(404)
+def introuvable(error):
+    return jsonify({"error": "Ressource introuvable."}), 404
+
+
+@app.errorhandler(Exception)
+def erreur_interne(error):
+    app.logger.exception("erreur non gérée")     # le détail reste dans les journaux
+    db.session.rollback()
+    return jsonify({"error": "Erreur interne."}), 500'''},
+                {"type": "quiz", "id": "q1", "question": "Quand une modification SQLAlchemy est-elle écrite en base ?", "choices": ["Dès `db.session.add`", "Au `db.session.commit`", "À la création de l'objet", "À la fin de la requête HTTP, toujours"], "answer": "Au `db.session.commit`", "explanation": "Avant le commit, tout peut encore être annulé par un `rollback`."},
+                {"type": "quiz", "id": "q2", "question": "Que stocke-t-on en base pour un mot de passe ?", "choices": ["Le mot de passe en clair", "Son hachage (argon2, bcrypt)", "Le mot de passe chiffré avec une clé du dépôt", "Rien"], "answer": "Son hachage (argon2, bcrypt)", "explanation": "Un hachage ne s'inverse pas : même une fuite de la base ne livre pas les mots de passe."},
+                {"type": "quiz", "id": "q3", "question": "Peut-on mettre une donnée sensible dans un JWT ?", "choices": ["Oui, il est chiffré", "Non : il est signé, mais lisible par tous", "Oui, s'il expire vite", "Seulement en HTTPS"], "answer": "Non : il est signé, mais lisible par tous", "explanation": "La signature empêche de le modifier, pas de le lire."},
+                {"type": "quiz", "id": "q4", "question": "Identifiants faux : pourquoi répondre le même message, que le compte existe ou non ?", "choices": ["Par paresse", "Pour ne pas révéler quels comptes existent", "Parce que Flask l'impose", "Pour accélérer la réponse"], "answer": "Pour ne pas révéler quels comptes existent", "explanation": "Un message distinct permettrait d'énumérer les adresses inscrites."},
             ],
         },
     ],
@@ -179,6 +258,22 @@ Un seul paramètre par chemin, et pas besoin d'expressions régulières.''',
                 {"name": "route_parametree", "code": "r = Routeur()\n@r.route('/cours/<slug>')\ndef detail(slug):\n    return slug.upper()\nassert r.dispatch('/cours/flask') == ('FLASK', 200)"},
                 {"name": "introuvable", "code": "r = Routeur()\nassert r.dispatch('/inconnu') == ('Not Found', 404)"},
                 {"name": "longueur_differente", "code": "r = Routeur()\n@r.route('/cours/<slug>')\ndef detail(slug):\n    return slug\nassert r.dispatch('/cours') == ('Not Found', 404)"},
+            ]},
+        },
+        {
+            "slug": "quiz-flask",
+            "title": "Flask, les bons réflexes",
+            "kind": "quiz",
+            "difficulty": "facile",
+            "statement": "Codes HTTP, structure d'un projet et sécurité de base.",
+            "spec": {"questions": [
+                {"id": "1", "question": "Quel code HTTP quand l'utilisateur n'est pas authentifié ?", "choices": ["400", "401", "403", "404"], "answer": "401", "explanation": "401 : non authentifié. 403 : authentifié, mais pas autorisé."},
+                {"id": "2", "question": "Quel code HTTP pour des données invalides envoyées par le client ?", "choices": ["200", "400", "500", "302"], "answer": "400", "explanation": "Les codes 4xx signalent une erreur du client, les 5xx une erreur du serveur."},
+                {"id": "3", "question": "Quelle méthode HTTP pour supprimer une ressource ?", "choices": ["GET", "POST", "DELETE", "PATCH"], "answer": "DELETE", "explanation": "GET lit, POST crée, PUT et PATCH modifient, DELETE supprime."},
+                {"id": "4", "question": "Comment récupérer le paramètre `page` de `/cours?page=2` ?", "choices": ["request.form[\"page\"]", "request.args.get(\"page\")", "request.get_json()[\"page\"]", "request.page"], "answer": "request.args.get(\"page\")", "explanation": "`request.args` contient les paramètres de l'URL, `request.form` ceux d'un formulaire."},
+                {"id": "5", "question": "Quelle commande applique les migrations ?", "choices": ["flask db migrate", "flask db upgrade", "flask run", "flask db init"], "answer": "flask db upgrade", "explanation": "`migrate` génère le script, `upgrade` l'exécute."},
+                {"id": "6", "question": "Où ranger SECRET_KEY ?", "choices": ["Dans le code", "Dans une variable d'environnement", "Dans le README", "Dans le frontend"], "answer": "Dans une variable d'environnement", "explanation": "Un secret ne va jamais dans le dépôt."},
+                {"id": "7", "question": "Une vue lève une exception inattendue. Que doit recevoir le client ?", "choices": ["La trace d'exécution complète", "Un message générique et un code 500", "Un code 200 vide", "Le contenu du fichier de configuration"], "answer": "Un message générique et un code 500", "explanation": "Le détail va dans les journaux, pas chez le client."},
             ]},
         },
     ],

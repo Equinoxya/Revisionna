@@ -63,6 +63,82 @@ def health():
 Cette application sert d'exemple : voyez les pages en pied de site, la page « Mon compte », et `docs/conformite-rgpd.md`.'''},
                 {"type": "quiz", "id": "q1", "question": "Quelle stratégie permet un retour en arrière presque instantané ?", "choices": ["Le remplacement", "Le bleu/vert", "La mise en ligne progressive", "Aucune"], "answer": "Le bleu/vert", "explanation": "L'ancien environnement est toujours là : il suffit de rebasculer le trafic."},
                 {"type": "quiz", "id": "q2", "question": "Que doit répondre /health quand la base est injoignable ?", "choices": ["200", "404", "503", "500"], "answer": "503", "explanation": "503, service indisponible : la plateforme cesse d'envoyer du trafic à cette instance."},
+                {"type": "quiz", "id": "q3", "question": "Quels sont les trois piliers de l'observabilité ?", "choices": ["Journaux, métriques, traces", "Tests, lint, couverture", "CPU, mémoire, disque", "Dev, recette, production"], "answer": "Journaux, métriques, traces", "explanation": "Ce qui s'est passé, des mesures dans le temps, et le parcours d'une requête."},
+            ],
+        },
+        {
+            "slug": "https-securite-et-sauvegardes",
+            "title": "HTTPS, durcissement et sauvegardes",
+            "duration_min": 25,
+            "blocks": [
+                {"type": "text", "md": '''En HTTP, tout circule **en clair** : mots de passe, jetons, contenu des pages. **HTTPS** ajoute TLS, qui apporte trois garanties :
+
+- la **confidentialité** : personne ne lit l'échange en chemin ;
+- l'**intégrité** : personne ne le modifie ;
+- l'**authenticité** : le **certificat** prouve que le serveur est bien celui du domaine.
+
+Un certificat est délivré par une **autorité de certification** reconnue par les navigateurs. *Let's Encrypt* en fournit gratuitement, valables 90 jours, renouvelés automatiquement par un outil comme `certbot` ou par un proxy comme Caddy ou Traefik.'''},
+                {"type": "code", "lang": "nginx", "code": '''server {
+    listen 80;
+    server_name revisionna.example;
+    return 301 https://$host$request_uri;        # tout le trafic passe en HTTPS
+}
+
+server {
+    listen 443 ssl;
+    server_name revisionna.example;
+
+    ssl_certificate     /etc/letsencrypt/live/revisionna.example/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/revisionna.example/privkey.pem;
+
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Content-Security-Policy "default-src 'self'" always;
+
+    location /api/ {
+        proxy_pass http://api:5000;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}'''},
+                {"type": "text", "md": '''Les **en-têtes de sécurité** demandent au navigateur de se protéger lui-même :
+
+| En-tête | Effet |
+|---|---|
+| `Strict-Transport-Security` (HSTS) | le navigateur n'utilisera plus jamais HTTP pour ce site |
+| `Content-Security-Policy` (CSP) | liste les sources autorisées pour les scripts, les images, les styles |
+| `X-Content-Type-Options: nosniff` | le navigateur ne devine pas le type d'un fichier |
+
+Ouvrez `frontend/nginx-securite.conf` : cette application les envoie tous.'''},
+                {"type": "text", "md": '''**Durcir** un serveur, c'est réduire ce qu'un attaquant peut atteindre :
+
+1. n'ouvrir que les ports nécessaires (80, 443, et SSH) ;
+2. SSH par clé uniquement, connexion directe de root interdite ;
+3. appliquer les mises à jour de sécurité, automatiquement si possible ;
+4. un compte de service sans privilèges pour chaque application ;
+5. limiter le débit sur les routes sensibles (connexion, inscription) pour freiner les attaques par force brute.'''},
+                {"type": "text", "md": '''Une **sauvegarde** n'existe que si elle a été **restaurée avec succès**. La règle **3-2-1** :
+
+- **3** copies des données ;
+- sur **2** supports différents ;
+- dont **1** hors site.
+
+Deux chiffres se décident avant l'incident, pas pendant :
+
+- le **RPO** (perte de données maximale admissible) : « on accepte de perdre au plus une heure de données » fixe la fréquence des sauvegardes ;
+- le **RTO** (durée maximale d'interruption) : « le service doit revenir en moins de deux heures » fixe les moyens de restauration.'''},
+                {"type": "code", "lang": "bash", "code": '''# sauvegarder
+pg_dump --format=custom revisionna > /srv/sauvegardes/revisionna-$(date +%F).dump
+
+# restaurer dans une base de test, et VÉRIFIER
+createdb restauration_test
+pg_restore --dbname=restauration_test /srv/sauvegardes/revisionna-2026-11-12.dump
+psql restauration_test -c "SELECT count(*) FROM users;"'''},
+                {"type": "callout", "tone": "warn", "md": "Une sauvegarde rangée sur le même disque que la base ne protège ni d'une panne du disque, ni d'un rançongiciel, ni d'un `rm -rf` malheureux. Et une sauvegarde qui contient des données personnelles doit être **chiffrée** et supprimée à l'expiration de sa durée de conservation."},
+                {"type": "quiz", "id": "q1", "question": "Que prouve le certificat d'un site en HTTPS ?", "choices": ["Que le site est sans bogue", "Que le serveur est bien celui du domaine", "Que le site est rapide", "Que le site respecte le RGPD"], "answer": "Que le serveur est bien celui du domaine", "explanation": "TLS ajoute à cela la confidentialité et l'intégrité des échanges."},
+                {"type": "quiz", "id": "q2", "question": "Que demande l'en-tête Strict-Transport-Security ?", "choices": ["De compresser les réponses", "De n'utiliser que HTTPS pour ce site à l'avenir", "De bloquer les cookies", "De mettre les pages en cache"], "answer": "De n'utiliser que HTTPS pour ce site à l'avenir", "explanation": "Même si l'utilisateur tape une adresse en http://."},
+                {"type": "quiz", "id": "q3", "question": "Que signifie la règle 3-2-1 ?", "choices": ["3 serveurs, 2 bases, 1 proxy", "3 copies, 2 supports, 1 hors site", "3 tests, 2 relectures, 1 fusion", "3 jours, 2 heures, 1 minute"], "answer": "3 copies, 2 supports, 1 hors site", "explanation": "Aucun incident isolé ne doit pouvoir détruire toutes les copies."},
+                {"type": "quiz", "id": "q4", "question": "Comment savoir qu'une sauvegarde est valable ?", "choices": ["Le fichier existe", "Sa taille est non nulle", "On l'a restaurée et vérifiée", "La tâche planifiée n'a pas signalé d'erreur"], "answer": "On l'a restaurée et vérifiée", "explanation": "Une sauvegarde jamais restaurée n'est qu'un espoir."},
+                {"type": "quiz", "id": "q5", "question": "« On accepte de perdre au plus une heure de données » : de quoi s'agit-il ?", "choices": ["Du RTO", "Du RPO", "Du TTL", "Du SLA"], "answer": "Du RPO", "explanation": "Le RPO borne la perte de données ; le RTO borne la durée d'interruption."},
             ],
         },
     ],
@@ -136,6 +212,11 @@ def charger_config(env, defauts=None):
                 {"id": "3", "question": "Qui doit servir les fichiers statiques du frontend ?", "choices": ["La base de données", "nginx ou un réseau de diffusion de contenu", "gunicorn", "Un volume Python"], "answer": "nginx ou un réseau de diffusion de contenu", "explanation": "Un serveur d'application Python sert mal les fichiers statiques."},
                 {"id": "4", "question": "Que journaliser en production ?", "choices": ["Tout, mots de passe compris", "Les événements utiles et les erreurs, jamais les secrets ni des données personnelles superflues", "Rien", "Seulement les erreurs 500"], "answer": "Les événements utiles et les erreurs, jamais les secrets ni des données personnelles superflues", "explanation": "Un journal est lu par beaucoup de monde et conservé longtemps."},
                 {"id": "5", "question": "Des camarades créent un compte sur votre site. Qu'est-ce qui devient obligatoire ?", "choices": ["Rien, c'est un projet d'école", "Les informer de l'usage de leurs données et leur permettre de les supprimer", "Leur faire signer un contrat papier", "Déclarer le site en préfecture"], "answer": "Les informer de l'usage de leurs données et leur permettre de les supprimer", "explanation": "Le RGPD s'applique dès qu'on traite les données d'autres personnes, quelle que soit la taille du projet."},
+                {"id": "6", "question": "Peut-on utiliser `flask run` en production ?", "choices": ["Oui", "Non : il faut un serveur d'application comme gunicorn", "Oui, avec DEBUG actif", "Oui, sur le port 80"], "answer": "Non : il faut un serveur d'application comme gunicorn", "explanation": "Le serveur de développement n'est ni performant ni sûr."},
+                {"id": "7", "question": "Quand jouer les migrations de base lors d'une mise en ligne ?", "choices": ["Après avoir ouvert le trafic", "Avant d'ouvrir le trafic, dans une étape à part", "Jamais en production", "Au premier appel d'un utilisateur"], "answer": "Avant d'ouvrir le trafic, dans une étape à part", "explanation": "Le nouveau code ne doit pas démarrer sur un ancien schéma."},
+                {"id": "8", "question": "Combien de temps un certificat Let's Encrypt est-il valable ?", "choices": ["7 jours", "90 jours", "1 an", "10 ans"], "answer": "90 jours", "explanation": "D'où l'importance d'un renouvellement automatique."},
+                {"id": "9", "question": "Quels ports laisser ouverts sur un serveur web ?", "choices": ["Tous", "80, 443 et SSH", "Seulement 5432", "Aucun"], "answer": "80, 443 et SSH", "explanation": "Tout le reste, base de données comprise, reste sur le réseau interne."},
+                {"id": "10", "question": "Où ranger la copie hors site d'une sauvegarde ?", "choices": ["Sur le même disque", "Dans un autre lieu ou chez un autre hébergeur", "Dans le dépôt Git", "Dans /tmp"], "answer": "Dans un autre lieu ou chez un autre hébergeur", "explanation": "Un incendie ou un rançongiciel ne doit pas emporter toutes les copies."},
             ]},
         },
     ],

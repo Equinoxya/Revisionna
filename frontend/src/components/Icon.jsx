@@ -18,6 +18,12 @@ const TRACES = {
   lune: <path d="M19.5 14.6A8 8 0 0 1 9.4 4.5a8 8 0 1 0 10.1 10.1z" />,
   gauche: <path d="M14.5 5.5 8 12l6.5 6.5" />,
   droite: <path d="M9.5 5.5 16 12l-6.5 6.5" />,
+  video: (
+    <>
+      <rect x="3" y="5.5" width="18" height="13" rx="2" />
+      <path d="M10.2 9.2v5.6l4.8-2.8z" />
+    </>
+  ),
   telecharger: <path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14" />,
   oeil: (
     <>

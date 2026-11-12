@@ -57,6 +57,73 @@ pipeline = [
 list(db.activity.aggregate(pipeline))'''},
                 {"type": "text", "md": "Dans cette application, c'est `backend/app/services/activity.py` qui tient ce journal. Si `MONGO_URL` est vide, l'écriture est simplement ignorée : une dépendance facultative ne doit jamais faire tomber l'API. Et comme ces documents concernent des personnes, un index TTL les efface automatiquement au bout de quelques mois."},
                 {"type": "quiz", "id": "q1", "question": "Quel est l'équivalent MongoDB du `GROUP BY` ?", "choices": ["$match", "$group", "$project", "$lookup"], "answer": "$group", "explanation": "`$match` correspond à WHERE, `$group` à GROUP BY, `$lookup` à JOIN, `$project` à SELECT."},
+                {"type": "quiz", "id": "q2", "question": "Dans un pipeline, pourquoi placer `$match` le plus tôt possible ?", "choices": ["C'est obligatoire", "Pour réduire le nombre de documents traités par les étapes suivantes", "Pour trier", "Pour renommer les champs"], "answer": "Pour réduire le nombre de documents traités par les étapes suivantes", "explanation": "Filtrer d'abord permet aussi d'utiliser un index."},
+                {"type": "quiz", "id": "q3", "question": "Que renvoie `find_one` quand rien ne correspond ?", "choices": ["Une erreur", "None", "Un document vide", "Une liste vide"], "answer": "None", "explanation": "Il faut donc tester le résultat avant de s'en servir."},
+            ],
+        },
+        {
+            "slug": "modelisation-et-redis",
+            "title": "Modéliser des documents, et Redis en cache",
+            "duration_min": 20,
+            "blocks": [
+                {"type": "text", "md": '''En relationnel, on modélise les **données** puis on écrit les requêtes. En document, on fait l'inverse : on part des **requêtes** que l'application fera le plus souvent, et on range les données pour qu'elles soient lues d'un seul coup.
+
+Deux façons de relier des informations :
+
+| | Imbriquer (*embed*) | Référencer |
+|---|---|---|
+| Principe | le sous-document vit dans le parent | on stocke l'identifiant |
+| Lecture | une seule requête | plusieurs requêtes, ou `$lookup` |
+| Mise à jour | à refaire dans chaque copie | à un seul endroit |
+| Pour | ce qui se lit ensemble et change peu | ce qui est partagé ou volumineux |'''},
+                {"type": "code", "lang": "python", "code": '''# imbriqué : les leçons n'existent pas sans leur cours
+{
+    "_id": "flask",
+    "titre": "Flask",
+    "lecons": [
+        {"slug": "routes", "titre": "Routes", "duree": 15},
+        {"slug": "factory", "titre": "Fabrique", "duree": 20},
+    ],
+}
+
+# référencé : un étudiant est partagé entre beaucoup de tentatives
+{"_id": 4812, "etudiant_id": 17, "exercice": "tp-routeur", "reussi": True}'''},
+                {"type": "callout", "tone": "warn", "md": "Un document MongoDB est limité à **16 Mo**. Un tableau qui grossit sans fin (les commentaires d'un article, les événements d'un compte) finit par poser problème : on le sort dans sa propre collection."},
+                {"type": "text", "md": '''Comme en SQL, une recherche sans **index** parcourt toute la collection. On indexe les champs sur lesquels on filtre et on trie, et on vérifie avec `explain()`.
+
+```python
+db.tentatives.create_index([("etudiant_id", 1), ("date", -1)])
+db.sessions.create_index("expire_le", expireAfterSeconds=0)   # index TTL : purge automatique
+```'''},
+                {"type": "text", "md": '''**Redis** est une base **clé-valeur en mémoire** : des lectures et des écritures en moins d'une milliseconde. Son usage le plus courant est le **cache** : on garde le résultat d'un calcul coûteux pendant un certain temps, pour ne pas le refaire à chaque requête.'''},
+                {"type": "code", "lang": "python", "code": '''import json
+import redis
+
+r = redis.Redis.from_url("redis://localhost:6379/0", decode_responses=True)
+
+
+def catalogue():
+    en_cache = r.get("catalogue")
+    if en_cache is not None:                 # trouvé : pas de requête SQL
+        return json.loads(en_cache)
+
+    cours = charger_depuis_la_base()         # absent : on calcule…
+    r.set("catalogue", json.dumps(cours), ex=300)   # …et on garde 5 minutes
+    return cours
+
+
+r.incr("visites:accueil")                    # compteur atomique
+r.delete("catalogue")                        # invalider après une modification'''},
+                {"type": "text", "md": '''Ce schéma s'appelle *cache-aside*. Deux questions se posent toujours :
+
+- **combien de temps** garder la valeur ? C'est le **TTL** (`ex=300`) : au-delà, la clé disparaît d'elle-même ;
+- **quand l'invalider** ? Dès que la donnée d'origine change, on supprime la clé.
+
+Redis sert aussi aux sessions, aux compteurs, à la limitation de débit et aux files d'attente. Comme tout vit en mémoire, on n'y range que des données qu'on sait **reconstruire** : la source de vérité reste la base principale.'''},
+                {"type": "quiz", "id": "q1", "question": "Quand imbriquer un sous-document plutôt que le référencer ?", "choices": ["Toujours", "Quand il se lit avec son parent et change peu", "Quand il est partagé par beaucoup de documents", "Quand il grossit sans limite"], "answer": "Quand il se lit avec son parent et change peu", "explanation": "On obtient tout en une lecture, sans risque de copies incohérentes."},
+                {"type": "quiz", "id": "q2", "question": "À quoi sert le TTL d'une clé Redis ?", "choices": ["À la chiffrer", "À la faire expirer automatiquement", "À la répliquer", "À la trier"], "answer": "À la faire expirer automatiquement", "explanation": "Une valeur en cache ne doit pas vivre plus longtemps que sa fraîcheur acceptable."},
+                {"type": "quiz", "id": "q3", "question": "La donnée d'origine change. Que faire de sa copie en cache ?", "choices": ["Rien", "L'invalider, c'est-à-dire supprimer la clé", "Redémarrer Redis", "Augmenter le TTL"], "answer": "L'invalider, c'est-à-dire supprimer la clé", "explanation": "Sinon l'application sert une valeur périmée jusqu'à l'expiration."},
+                {"type": "quiz", "id": "q4", "question": "Peut-on faire de Redis la seule source de vérité des commandes d'un site marchand ?", "choices": ["Oui, c'est le plus rapide", "Non : on n'y range que ce qu'on sait reconstruire", "Oui, avec un TTL long", "Oui, si le serveur a beaucoup de mémoire"], "answer": "Non : on n'y range que ce qu'on sait reconstruire", "explanation": "La source de vérité reste une base durable ; Redis l'accélère."},
             ],
         },
     ],
@@ -126,6 +193,10 @@ Pour `$group`, seul le compteur `{"$sum": 1}` est à gérer, sous le nom de clé
                 {"id": "2", "question": "Des virements bancaires entre comptes", "choices": ["Une base document", "Une base relationnelle avec transactions ACID", "Un cache Redis", "Une base en colonnes"], "answer": "Une base relationnelle avec transactions ACID", "explanation": "Débiter l'un sans créditer l'autre est inacceptable : il faut l'atomicité."},
                 {"id": "3", "question": "Des suggestions d'amis dans un réseau social", "choices": ["Une base graphe", "Une base clé-valeur", "Une base en colonnes", "Du relationnel pur"], "answer": "Une base graphe", "explanation": "Parcourir des relations sur plusieurs niveaux, c'est le point fort du graphe."},
                 {"id": "4", "question": "Que perd-on souvent en passant au NoSQL ?", "choices": ["La performance", "Les jointures et les contraintes d'intégrité", "Le typage", "La persistance"], "answer": "Les jointures et les contraintes d'intégrité", "explanation": "On duplique des données, et on valide dans l'application."},
+                {"id": "5", "question": "Le résultat d'une requête lente, à garder cinq minutes", "choices": ["PostgreSQL", "Redis, avec un TTL", "Neo4j", "Un fichier CSV"], "answer": "Redis, avec un TTL", "explanation": "C'est le rôle d'un cache : rapide, temporaire, reconstructible."},
+                {"id": "6", "question": "Des mesures de capteurs, écrites en masse et lues par plage de dates", "choices": ["Une base orientée colonnes ou séries temporelles", "Une base graphe", "Redis seul", "Un tableur"], "answer": "Une base orientée colonnes ou séries temporelles", "explanation": "Cassandra ou TimescaleDB sont conçues pour ces écritures massives."},
+                {"id": "7", "question": "Quelle est la taille maximale d'un document MongoDB ?", "choices": ["1 Mo", "16 Mo", "1 Go", "Illimitée"], "answer": "16 Mo", "explanation": "D'où l'intérêt de sortir les tableaux qui grossissent sans fin."},
+                {"id": "8", "question": "Sans index sur le champ filtré, que fait MongoDB ?", "choices": ["Il refuse la requête", "Il parcourt toute la collection", "Il crée l'index tout seul", "Il renvoie un résultat partiel"], "answer": "Il parcourt toute la collection", "explanation": "Comme en SQL : vérifiez avec `explain()`."},
             ]},
         },
     ],

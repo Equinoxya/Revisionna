@@ -2,11 +2,11 @@ def test_catalogue_public(client):
     resp = client.get("/api/courses")
     assert resp.status_code == 200
     courses = resp.get_json()["courses"]
-    assert len(courses) == 11
+    assert len(courses) == 14
     slugs = {c["slug"] for c in courses}
     assert {"python", "flask", "django", "react", "sql", "nosql",
             "machine-learning", "integration-ia", "docker", "ci-cd",
-            "deploiement"} == slugs
+            "deploiement", "devops-bases", "systeme-linux", "reseaux"} == slugs
 
 
 def test_detail_cours(client):
@@ -41,3 +41,10 @@ def test_exercice_sans_solution(client, auth):
 
 def test_lecon_requiert_authentification(client):
     assert client.get("/api/courses/python/lessons/types-et-structures").status_code == 401
+
+
+def test_lecon_commence_par_sa_video(client, auth):
+    resp = client.get("/api/courses/reseaux/lessons/ports-dns-et-dhcp", headers=auth)
+    assert resp.status_code == 200
+    blocks = resp.get_json()["lesson"]["blocks"]
+    assert blocks[0] == {"type": "video", "url": ""}
